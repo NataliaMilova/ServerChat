@@ -92,7 +92,7 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <configuration>
-          <mainClass>ru.ifmo.DataBaseTest</mainClass>
+          <mainClass>ru.ifmo.ChatServer</mainClass>
         </configuration>
         <version>1.6.0</version>
       </plugin>
@@ -103,7 +103,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>ru.ifmo.DataBaseTest</mainClass>
+              <mainClass>ru.ifmo.ChatServer</mainClass>
             </manifest>
           </archive>
         </configuration>
