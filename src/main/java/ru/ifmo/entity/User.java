@@ -1,5 +1,7 @@
 package ru.ifmo.entity;
 
+import java.util.Objects;
+
 public class User {
     private String userId;
     private String nickname;
@@ -45,5 +47,31 @@ public class User {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return lastVisit == user.lastVisit &&
+                Objects.equals(userId, user.userId) &&
+                Objects.equals(nickname, user.nickname) &&
+                Objects.equals(password, user.password);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(userId, nickname, lastVisit, password);
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "userId='" + userId + '\'' +
+                ", nickname='" + nickname + '\'' +
+                ", lastVisit=" + lastVisit +
+                '}';
     }
 }

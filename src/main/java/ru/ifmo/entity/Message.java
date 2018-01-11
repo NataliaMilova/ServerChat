@@ -1,5 +1,7 @@
 package ru.ifmo.entity;
 
+import java.util.Objects;
+
 public class Message {
     private long messageId;
     private long timestamp;
@@ -7,7 +9,8 @@ public class Message {
     private String userId;
     private int chatId;
 
-    public Message(long timestamp, String text, String userId, int chatId) {
+    public Message(long messageId, long timestamp, String text, String userId, int chatId) {
+        this.messageId = messageId;
         this.timestamp = timestamp;
         this.text = text;
         this.userId = userId;
@@ -55,5 +58,34 @@ public class Message {
 
     public void setChatId(int chatId) {
         this.chatId = chatId;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Message message = (Message) o;
+        return messageId == message.messageId &&
+                timestamp == message.timestamp &&
+                chatId == message.chatId &&
+                Objects.equals(text, message.text) &&
+                Objects.equals(userId, message.userId);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(messageId, timestamp, text, userId, chatId);
+    }
+
+    @Override
+    public String toString() {
+        return "Message{" +
+                "messageId=" + messageId +
+                ", timestamp=" + timestamp +
+                ", text='" + text + '\'' +
+                ", userId='" + userId + '\'' +
+                ", chatId=" + chatId +
+                '}';
     }
 }

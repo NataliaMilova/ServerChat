@@ -39,7 +39,10 @@ public class MessageSocket {
                         break;
                         //отдать сообщения по фильтру времени последнего визита
                     case MESSAGE:
-                        DataBaseUtils.onWebSocketMessage(message);
+                        DataBaseUtils.onWebSocketMessage(parse);
+                        break;
+                    case EXIT:
+                        DataBaseUtils.onWebSocketDisconnectUser(parse, this.session);
                         break;
                 }
             }
@@ -51,8 +54,6 @@ public class MessageSocket {
     @OnWebSocketClose
     public void onClose(int statusCode, String reason) {
         System.out.println("Close: statusCode=" + statusCode + ", reason=" + reason);
-        for (Session session: ChatServer.allSessions().values()){
-            System.out.println(session.isOpen());
-        }
     }
+
 }
