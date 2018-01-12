@@ -1,7 +1,6 @@
 package ru.ifmo.services;
 
 
-import jdk.nashorn.internal.parser.JSONParser;
 import org.json.simple.JSONObject;
 import ru.ifmo.entity.Chat;
 
@@ -13,52 +12,56 @@ import java.util.Set;
 public class ChatsUsersService {
 
     public Set<Chat> getChatsByUserId(String userId, Connection connection) throws SQLException {
-        Set<Chat> result = new HashSet<>();
-        String sql = "SELECT chatId,chatName FROM chats_users NATURAL JOIN chats WHERE userId =" + "'" + userId + "'"+";";
-        Statement statement = connection.createStatement();
-        ResultSet resultSet = statement.executeQuery(sql);
-        while (resultSet.next()){
-            Chat chat = new Chat();
-            chat.setChatId(resultSet.getInt("chatId"));
-            chat.setChatName(resultSet.getString("chatName"));
-            result.add(chat);
+        try (Connection con = connection) {
+            Set<Chat> result = new HashSet<>();
+            String sql = "SELECT chatId,chatName FROM chats_users NATURAL JOIN chats WHERE userId =" + "'" + userId + "'" + ";";
+            try (Statement statement = con.createStatement()) {
+                ResultSet resultSet = statement.executeQuery(sql);
+                while (resultSet.next()) {
+                    Chat chat = new Chat();
+                    chat.setChatId(resultSet.getInt("chatId"));
+                    chat.setChatName(resultSet.getString("chatName"));
+                    result.add(chat);
+                }
+                return result;
+            }
         }
-        statement.close();
-        connection.close();
-        return result;
     }
 
     public Set<String> getUsersByChatId(int chatId, Connection connection) throws SQLException {
-        Set<String> result = new HashSet<>();
-        String sql = "SELECT userId FROM chats_users WHERE chatId = " + "'" + chatId + "'"+";";
-        Statement statement = connection.createStatement();
-        ResultSet resultSet = statement.executeQuery(sql);
-        while (resultSet.next())
-            result.add(resultSet.getString("userId"));
-        statement.close();
-        connection.close();
-        return result;
+        try (Connection con = connection) {
+            Set<String> result = new HashSet<>();
+            String sql = "SELECT userId FROM chats_users WHERE chatId = " + "'" + chatId + "'" + ";";
+            try (Statement statement = con.createStatement()) {
+                ResultSet resultSet = statement.executeQuery(sql);
+                while (resultSet.next())
+                    result.add(resultSet.getString("userId"));
+                return result;
+            }
+        }
     }
 
     public void outUserFromChat(int chatId, String userId, Connection connection) throws SQLException {
-        String sql = "DELETE FROM chats_users WHERE chatId = ? AND userId = ?";
-        PreparedStatement pstmt = connection.prepareStatement(sql);
-        pstmt.setInt(1, chatId);
-        pstmt.setString(2, userId);
-        pstmt.executeUpdate();
-        pstmt.close();
-        connection.close();
+        try (Connection con = connection) {
+            String sql = "DELETE FROM chats_users WHERE chatId = ? AND userId = ?";
+            try (PreparedStatement pstmt = con.prepareStatement(sql)){
+                pstmt.setInt(1, chatId);
+                pstmt.setString(2, userId);
+                pstmt.executeUpdate();
+            }
+        }
     }
 
     public boolean insertChatsUsers(String userId, int chatId, Connection connection) throws SQLException {
-        String sql = "INSERT INTO chats_users(chatId, userId) VALUES(?,?)";
-        PreparedStatement pstmt = connection.prepareStatement(sql);
-        pstmt.setInt(1, chatId);
-        pstmt.setString(2, userId);
-        pstmt.executeUpdate();
-        pstmt.close();
-        connection.close();
-        return true;
+        try (Connection con = connection) {
+            String sql = "INSERT INTO chats_users(chatId, userId) VALUES(?,?)";
+            try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+                pstmt.setInt(1, chatId);
+                pstmt.setString(2, userId);
+                pstmt.executeUpdate();
+                return true;
+            }
+        }
     }
 
     public boolean insertChatsUsers(Iterator<JSONObject> userId, int chatId, Connection connection){

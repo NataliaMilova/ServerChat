@@ -8,6 +8,9 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.websocket.api.Session;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 import ru.ifmo.utils.DataBaseUtils;
 import ru.ifmo.websocket.SocketServlet;
 
@@ -15,15 +18,22 @@ import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.logging.LogManager;
 
 
 public class ChatServer {
     private static Map<String, Set<Session>> users = new ConcurrentHashMap<>();
     private static BlockingDeque<Integer> chatsForCheck = new LinkedBlockingDeque<>();
+    private static Logger LOGGER = LoggerFactory.getLogger(ChatServer.class);
+
+    static{
+        LogManager.getLogManager().reset();
+        SLF4JBridgeHandler.install();
+    }
 
     public static void main(String[] args) {
         if (DataBaseUtils.createDataBase()) {
-
+            LOGGER.info("test message");
             Thread deleteWorker = new Worker();
             deleteWorker.start();
             ResourceConfig config = new ResourceConfig();
@@ -77,6 +87,7 @@ public class ChatServer {
             while (!isInterrupted()){
                 try {
                     int chatId = chatsForCheck.takeFirst();
+                    System.out.println("i am wakeup");
                     DataBaseUtils.deleteChat(chatId);
                 } catch (InterruptedException e) {
                     interrupt();

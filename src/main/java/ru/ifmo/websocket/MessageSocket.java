@@ -8,6 +8,8 @@ import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.ifmo.ChatServer;
 import ru.ifmo.entity.Chat;
 import ru.ifmo.utils.DataBaseUtils;
@@ -17,6 +19,8 @@ import java.sql.SQLException;
 
 @WebSocket
 public class MessageSocket {
+
+    private static Logger LOGGER = LoggerFactory.getLogger(MessageSocket.class);
 
     private Session session;
 
@@ -37,7 +41,6 @@ public class MessageSocket {
                     case AUTHORIZATION:
                         DataBaseUtils.onWebSocketConnectUser(parse, this.session);
                         break;
-                        //отдать сообщения по фильтру времени последнего визита
                     case MESSAGE:
                         DataBaseUtils.onWebSocketMessage(parse);
                         break;

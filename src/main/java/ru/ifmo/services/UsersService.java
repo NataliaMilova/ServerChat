@@ -6,51 +6,57 @@ import java.sql.*;
 public class UsersService {
 
     public boolean checkOfUsersExistence(String userId, Connection connection) throws SQLException {
-        String sql = "SELECT * FROM users WHERE userId = " + "'" + userId + "'" + ";";
-        Statement statement = connection.createStatement();
-        ResultSet resultSet = statement.executeQuery(sql);
-        if (resultSet.next())
-            return true;
-        else
-            return false;
+        try (Connection con = connection) {
+            String sql = "SELECT * FROM users WHERE userId = " + "'" + userId + "'" + ";";
+            try (Statement statement = con.createStatement()) {
+                ResultSet resultSet = statement.executeQuery(sql);
+                if (resultSet.next())
+                    return true;
+                else
+                    return false;
+            }
+        }
     }
 
     public User getUserById(String userId, Connection connection) throws SQLException {
-        User user = new User();
-        String sql = "SELECT * FROM users WHERE userId = " + "'" + userId + "'" + ";";
-        Statement statement = connection.createStatement();
-        ResultSet resultSet = statement.executeQuery(sql);
-        while (resultSet.next()) {
-            user.setUserId(resultSet.getString("userId"));
-            user.setLastVisit(resultSet.getLong("lastVisit"));
-            user.setNickname(resultSet.getString("nickname"));
-            user.setPassword(resultSet.getString("password"));
+        try (Connection con = connection) {
+            User user = new User();
+            String sql = "SELECT * FROM users WHERE userId = " + "'" + userId + "'" + ";";
+            try (Statement statement = con.createStatement()) {
+                ResultSet resultSet = statement.executeQuery(sql);
+                while (resultSet.next()) {
+                    user.setUserId(resultSet.getString("userId"));
+                    user.setLastVisit(resultSet.getLong("lastVisit"));
+                    user.setNickname(resultSet.getString("nickname"));
+                    user.setPassword(resultSet.getString("password"));
+                }
+                return user;
+            }
         }
-        statement.close();
-        connection.close();
-        return user;
     }
 
     public void insertUser(User user, Connection connection) throws SQLException {
-        String sql = "INSERT INTO users(userId, nickName, password, lastVisit) VALUES(?,?,?,?)";
-        PreparedStatement preparedStatement = connection.prepareStatement(sql);
-        preparedStatement.setString(1, user.getUserId());
-        preparedStatement.setString(2, user.getNickname());
-        preparedStatement.setString(3, user.getPassword());
-        preparedStatement.setLong(4, 0);
-        preparedStatement.executeUpdate();
-        preparedStatement.close();
-        connection.close();
+        try (Connection con = connection) {
+            String sql = "INSERT INTO users(userId, nickName, password, lastVisit) VALUES(?,?,?,?)";
+            try (PreparedStatement preparedStatement = con.prepareStatement(sql)) {
+                preparedStatement.setString(1, user.getUserId());
+                preparedStatement.setString(2, user.getNickname());
+                preparedStatement.setString(3, user.getPassword());
+                preparedStatement.setLong(4, 0);
+                preparedStatement.executeUpdate();
+            }
+        }
     }
 
     public void updateUserLastVisit(User user, Connection connection) throws SQLException {
-        String sql = "UPDATE users SET lastVisit = ? WHERE userId = ?;";
-        PreparedStatement preparedStatement = connection.prepareStatement(sql);
-        preparedStatement.setLong(1, user.getLastVisit());
-        preparedStatement.setString(2, user.getUserId());
-        preparedStatement.executeUpdate();
-        preparedStatement.close();
-        connection.close();
+        try (Connection con = connection) {
+            String sql = "UPDATE users SET lastVisit = ? WHERE userId = ?;";
+            try (PreparedStatement preparedStatement = con.prepareStatement(sql)) {
+                preparedStatement.setLong(1, user.getLastVisit());
+                preparedStatement.setString(2, user.getUserId());
+                preparedStatement.executeUpdate();
+            }
+        }
     }
 
 }

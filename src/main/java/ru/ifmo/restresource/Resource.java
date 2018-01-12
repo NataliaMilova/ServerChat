@@ -3,15 +3,19 @@ package ru.ifmo.restresource;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ru.ifmo.utils.DataBaseUtils;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.sql.SQLException;
 
 @Path("chat")
 public class Resource {
+    private static Logger LOGGER = LoggerFactory.getLogger(Resource.class);
 
     @POST
     @Path("auth")
@@ -115,10 +119,9 @@ public class Resource {
     public Response getMessagesByChatId(String requestJson){
         String responseJson = "";
         try {
-            System.out.println(requestJson);
             JSONParser parser = new JSONParser();
             JSONObject parse = (JSONObject) parser.parse(requestJson);
-            System.out.println(parse.toJSONString());
+            System.out.println(parse.toJSONString());//log
             if (parse.get("chatId") != null)
                 responseJson = DataBaseUtils.getMessagesByChatId(parse);
             else
@@ -140,10 +143,9 @@ public class Resource {
     public Response createChat(String requestJson){
         String responseJson = "";
         try {
-            System.out.println(requestJson);
             JSONParser parser = new JSONParser();
             JSONObject parse = (JSONObject) parser.parse(requestJson);
-            System.out.println(parse.toJSONString());
+            System.out.println(parse.toJSONString());//log
             if (parse.get("userId") != null && parse.get("chatName") != null &&  parse.get("users") != null)
                 responseJson = DataBaseUtils.createChat(parse);
             else
@@ -151,6 +153,8 @@ public class Resource {
                         .entity("Invalid request json")
                         .build();
         } catch (SQLException | ParseException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return Response.status(Response.Status.OK)
@@ -176,6 +180,8 @@ public class Resource {
                         .entity("Invalid request json")
                         .build();
         } catch (SQLException | ParseException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return Response.status(Response.Status.OK)
