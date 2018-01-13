@@ -122,7 +122,7 @@ public class Resource {
             JSONParser parser = new JSONParser();
             JSONObject parse = (JSONObject) parser.parse(requestJson);
             System.out.println(parse.toJSONString());//log
-            if (parse.get("chatId") != null)
+            if (parse.get("chatId") != null && parse.get("pageNum") != null)
                 responseJson = DataBaseUtils.getMessagesByChatId(parse);
             else
                 return Response.status(Response.Status.BAD_REQUEST)

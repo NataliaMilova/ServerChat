@@ -11,9 +11,13 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
+import org.sqlite.javax.SQLiteConnectionPoolDataSource;
 import ru.ifmo.utils.DataBaseUtils;
 import ru.ifmo.websocket.SocketServlet;
 
+import java.io.File;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,20 +26,27 @@ import java.util.logging.LogManager;
 
 
 public class ChatServer {
+    private static SQLiteConnectionPoolDataSource dataSource = new SQLiteConnectionPoolDataSource();
     private static Map<String, Set<Session>> users = new ConcurrentHashMap<>();
     private static BlockingDeque<Integer> chatsForCheck = new LinkedBlockingDeque<>();
-    private static Logger LOGGER = LoggerFactory.getLogger(ChatServer.class);
+    public static Logger LOGGER = LoggerFactory.getLogger(ChatServer.class);
+    private static File dbDir = new File(System.getProperty("user.home") + "/chat");
 
     static{
+        if (!dbDir.exists())
+            dbDir.mkdirs();
+        dataSource.setUrl("jdbc:sqlite:" + dbDir.getAbsolutePath().toString() + "/ChatServer.db");
+        dataSource.setEnforceForeignKeys(true);
         LogManager.getLogManager().reset();
         SLF4JBridgeHandler.install();
     }
 
     public static void main(String[] args) {
         if (DataBaseUtils.createDataBase()) {
-            LOGGER.info("test message");
             Thread deleteWorker = new Worker();
             deleteWorker.start();
+            //log info deleteworker started
+
             ResourceConfig config = new ResourceConfig();
             config.packages("ru.ifmo");
             ServletHolder servlet = new ServletHolder(new ServletContainer(config));
@@ -55,18 +66,24 @@ public class ChatServer {
                 server.start();
                 server.join();
             } catch (Exception e) {
-                e.printStackTrace(System.err);
+                LOGGER.error("", e);
                 deleteWorker.interrupt();
             }
+            finally {
+                server.destroy();
+            }
         }
-        else
-            System.out.println("database error!");
+    }
+
+    public static Connection getConnection() throws SQLException {
+        return dataSource.getPooledConnection().getConnection();
     }
 
     public static void addUser(Session session, String userId){
         if (users.get(userId) == null)
             users.put(userId, new HashSet<Session>());
         users.get(userId).add(session);
+        //log debug add user and session
     }
 
     public static Set<Session> getUserSessions(String userId){
@@ -75,10 +92,12 @@ public class ChatServer {
 
     public static void deleteUser(String userId, Session session){
         users.get(userId).remove(session);
+        //log debug delete user id and session
     }
 
     public static void addChatForCheck(int chatId){
         chatsForCheck.addLast(chatId);
+        //log debug chat + chatid add for checking by deleteworker
     }
 
     public static class Worker extends Thread{
@@ -87,7 +106,7 @@ public class ChatServer {
             while (!isInterrupted()){
                 try {
                     int chatId = chatsForCheck.takeFirst();
-                    System.out.println("i am wakeup");
+                    //log debug task chatid
                     DataBaseUtils.deleteChat(chatId);
                 } catch (InterruptedException e) {
                     interrupt();

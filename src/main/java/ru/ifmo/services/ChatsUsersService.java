@@ -14,16 +14,18 @@ public class ChatsUsersService {
     public Set<Chat> getChatsByUserId(String userId, Connection connection) throws SQLException {
         try (Connection con = connection) {
             Set<Chat> result = new HashSet<>();
-            String sql = "SELECT chatId,chatName FROM chats_users NATURAL JOIN chats WHERE userId =" + "'" + userId + "'" + ";";
-            try (Statement statement = con.createStatement()) {
-                ResultSet resultSet = statement.executeQuery(sql);
-                while (resultSet.next()) {
-                    Chat chat = new Chat();
-                    chat.setChatId(resultSet.getInt("chatId"));
-                    chat.setChatName(resultSet.getString("chatName"));
-                    result.add(chat);
+            String sql = "SELECT chatId,chatName FROM chats_users NATURAL JOIN chats WHERE userId = ?;";
+            try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+                pstmt.setString(1, userId);
+                try (ResultSet resultSet = pstmt.executeQuery()) {
+                    while (resultSet.next()) {
+                        Chat chat = new Chat();
+                        chat.setChatId(resultSet.getInt("chatId"));
+                        chat.setChatName(resultSet.getString("chatName"));
+                        result.add(chat);
+                    }
+                    return result;
                 }
-                return result;
             }
         }
     }
@@ -31,12 +33,14 @@ public class ChatsUsersService {
     public Set<String> getUsersByChatId(int chatId, Connection connection) throws SQLException {
         try (Connection con = connection) {
             Set<String> result = new HashSet<>();
-            String sql = "SELECT userId FROM chats_users WHERE chatId = " + "'" + chatId + "'" + ";";
-            try (Statement statement = con.createStatement()) {
-                ResultSet resultSet = statement.executeQuery(sql);
-                while (resultSet.next())
-                    result.add(resultSet.getString("userId"));
-                return result;
+            String sql = "SELECT userId FROM chats_users WHERE chatId = ?;";
+            try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+                pstmt.setInt(1, chatId);
+                try (ResultSet resultSet = pstmt.executeQuery()) {
+                    while (resultSet.next())
+                        result.add(resultSet.getString("userId"));
+                    return result;
+                }
             }
         }
     }

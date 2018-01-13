@@ -15,81 +15,93 @@ import ru.ifmo.services.ChatsUsersService;
 import ru.ifmo.services.MessagesService;
 import ru.ifmo.services.UsersService;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.*;
 import java.util.*;
 
 public class DataBaseUtils {
 
-    private static SQLiteConnectionPoolDataSource dataSource = new SQLiteConnectionPoolDataSource();
     private static ChatsUsersService chatsUsersService = new ChatsUsersService();
     private static UsersService usersService = new UsersService();
     private static ChatsService chatsService = new ChatsService();
-    private static MessagesService messagesService = new MessagesService();
-    private static Logger LOGGER = LoggerFactory.getLogger(DataBaseUtils.class);
-
-    static {
-        dataSource.setUrl("jdbc:sqlite:./ChatServer.db");
-        dataSource.setEnforceForeignKeys(true);
-    }
+    private static MessagesService messagesService = new MessagesService(10);
 
     private static void createTables() throws SQLException {
-        String chats = "CREATE TABLE IF NOT EXISTS chats (\n"
-                + "	chatId integer PRIMARY KEY AUTOINCREMENT,\n"
-                + "	chatName varchar(255) NOT NULL\n"
-                + ");";
-        String users = "CREATE TABLE IF NOT EXISTS users (\n"
-                + "	userId varchar(12) NOT NULL UNIQUE,\n"
-                + "	nickname varchar(100) NOT NULL,\n"
-                + "	lastVisit bigint NOT NULL,\n"
-                + "	password text NOT NULL,\n"
-                + "	PRIMARY KEY (userId)\n"
-                + ");";
-        String messages = "CREATE TABLE IF NOT EXISTS messages (\n"
-                + "	messageId integer PRIMARY KEY AUTOINCREMENT,\n"
-                + "	timestamp bigint NOT NULL,\n"
-                + "	text text NOT NULL,\n"
-                + "	userId varchar NOT NULL,\n"
-                + "	chatId integer NOT NULL,\n"
-                + "	FOREIGN KEY (userId) REFERENCES users (userId)\n"
-                + "	FOREIGN KEY (chatId) REFERENCES chats (chatId) ON DELETE CASCADE\n"
-                + ");";
-        String chats_users = "CREATE TABLE IF NOT EXISTS chats_users (\n"
-                + "	userId varchar NOT NULL,\n"
-                + "	chatId integer NOT NULL,\n"
-                + "	FOREIGN KEY (userId) REFERENCES users (userId)\n"
-                + "	FOREIGN KEY (chatId) REFERENCES chats (chatId) ON DELETE CASCADE\n"
-                + ");";
-        try (Connection connection = dataSource.getPooledConnection().getConnection()) {
+        StringBuilder chatsSb = new StringBuilder();
+        chatsSb.append("CREATE TABLE IF NOT EXISTS chats ( \n")
+                .append(" chatId integer PRIMARY KEY AUTOINCREMENT,\n")
+                .append(" chatName varchar(255) NOT NULL\n")
+                .append(");");
+        String chats = chatsSb.toString();
+
+        StringBuilder usersSb = new StringBuilder();
+        usersSb.append("CREATE TABLE IF NOT EXISTS users (\n")
+                .append(" userId varchar(12) NOT NULL UNIQUE,\n")
+                .append(" nickname varchar(100) NOT NULL,\n")
+                .append(" lastVisit bigint NOT NULL,\n")
+                .append(" password text NOT NULL,\n")
+                .append(" PRIMARY KEY (userId)\n")
+                .append(");");
+        String users = usersSb.toString();
+
+        StringBuilder messagesSb = new StringBuilder();
+        messagesSb.append("CREATE TABLE IF NOT EXISTS messages (\n")
+                .append("	messageId integer PRIMARY KEY AUTOINCREMENT,\n")
+                .append("	timestamp bigint NOT NULL,\n")
+                .append("	text text NOT NULL,\n")
+                .append("	userId varchar NOT NULL,\n")
+                .append("	chatId integer NOT NULL,\n")
+                .append("	FOREIGN KEY (userId) REFERENCES users (userId)\n")
+                .append("	FOREIGN KEY (chatId) REFERENCES chats (chatId) ON DELETE CASCADE\n")
+                .append(");");
+        String messages = messagesSb.toString();
+
+        StringBuilder chatsUsersSb = new StringBuilder();
+        chatsUsersSb.append("CREATE TABLE IF NOT EXISTS chats_users (\n")
+                .append(" userId varchar NOT NULL,\n")
+                .append(" chatId integer NOT NULL,\n")
+                .append(" FOREIGN KEY (userId) REFERENCES users (userId)\n")
+                .append(" FOREIGN KEY (chatId) REFERENCES chats (chatId) ON DELETE CASCADE\n")
+                .append(");");
+        String chats_users = chatsUsersSb.toString();
+
+        try (Connection connection = ChatServer.getConnection()) {
+            //log debug try create table chats
             createTable(connection, chats);
+            //log info table chats success create or exists
+            //log debug log debug try create table users
+            //etc
             createTable(connection, users);
             createTable(connection, messages);
             createTable(connection, chats_users);
         }
-        LOGGER.info("create table");
+        //log create
     }
 
     private static void createTable(Connection connection, String sql) throws SQLException {
-        Statement stmt = connection.createStatement();
-        stmt.execute(sql);
-        stmt.close();
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(sql);
+        }
     }
 
     public static boolean createDataBase(){
         try {
             createTables();
+            //log info database is ready
         } catch (SQLException e) {
-            e.printStackTrace();
+            ChatServer.LOGGER.error("Error of creating databases tables",e);
             return false;
         }
         return true;
     }
 
+
     public static String authorization(JSONObject parse) throws SQLException{
         JSONObject result = new JSONObject();
         String userId = (String)parse.get("userId");
         String password = (String)parse.get("password");
-        User user = usersService.getUserById(userId, dataSource.getPooledConnection().getConnection());
+        User user = usersService.getUserById(userId, ChatServer.getConnection());
         if (user.getUserId() == null){
             result.put("code", "404");
             result.put("message","User is not found");
@@ -112,9 +124,9 @@ public class DataBaseUtils {
         String userId = (String)parse.get("userId");
         String nickname = (String)parse.get("nickname");
         String password = (String)parse.get("password");
-        if (!usersService.checkOfUsersExistence(userId, dataSource.getPooledConnection().getConnection())){
+        if (!usersService.checkOfUsersExistence(userId, ChatServer.getConnection())){
             User addUser = new User(userId, nickname, password);
-            usersService.insertUser(addUser, dataSource.getPooledConnection().getConnection());
+            usersService.insertUser(addUser, ChatServer.getConnection());
             result.put("code", "200");
             result.put("userId", userId);
             result.put("nickname", nickname);
@@ -131,7 +143,7 @@ public class DataBaseUtils {
     public static void onWebSocketConnectUser(JSONObject json, Session session) throws SQLException, IOException {
         System.out.println(json.toJSONString());
         if (json.get("userId") != null){
-            if (usersService.checkOfUsersExistence((String) json.get("userId"), dataSource.getPooledConnection().getConnection())) {
+            if (usersService.checkOfUsersExistence((String) json.get("userId"),ChatServer.getConnection())) {
                 ChatServer.addUser(session, (String) json.get("userId"));
             }
         }
@@ -140,11 +152,11 @@ public class DataBaseUtils {
     public static void onWebSocketDisconnectUser(JSONObject json, Session session) throws SQLException, IOException {
         System.out.println(json.toJSONString());
         if (json.get("userId") != null){
-            User user = usersService.getUserById((String) json.get("userId"), dataSource.getPooledConnection().getConnection());
+            User user = usersService.getUserById((String) json.get("userId"), ChatServer.getConnection());
             if (user.getUserId() != null) {
                 ChatServer.deleteUser((String) json.get("userId"), session);
             }
-            usersService.updateUserLastVisit(user, dataSource.getPooledConnection().getConnection());
+            usersService.updateUserLastVisit(user, ChatServer.getConnection());
         }
     }
 
@@ -152,12 +164,12 @@ public class DataBaseUtils {
         Message message = parseToMessage(json);
         //System.out.println(json);//log input message
         if (message.getText() != null){
-            messagesService.insertMessage(message, dataSource.getPooledConnection().getConnection());
-            Set<String> users = chatsUsersService.getUsersByChatId(message.getChatId(), dataSource.getPooledConnection().getConnection());
+            messagesService.insertMessage(message, ChatServer.getConnection());
+            Set<String> users = chatsUsersService.getUsersByChatId(message.getChatId(), ChatServer.getConnection());
             for (String user: users)
-                if (ChatServer.getUserSessions(user) != null){
-                    for (Session session: ChatServer.getUserSessions(user)){
-                        if (session.isOpen()){
+                if (ChatServer.getUserSessions(user) != null) {
+                    for (Session session : ChatServer.getUserSessions(user)) {
+                        if (session.isOpen()) {
                             JSONObject message1 = createJsonMessage(message);
                             message1.put("type", "message");
                             session.getRemote().sendString(message1.toJSONString());
@@ -168,12 +180,14 @@ public class DataBaseUtils {
     }
 
     public static String getChatsByUserId(JSONObject parse) throws SQLException {
+        System.out.println(parse);
         JSONObject jsonObject =  new JSONObject();
         String userId = (String) parse.get("userId");
         JSONArray array = new JSONArray();
-        for(Chat chat: chatsUsersService.getChatsByUserId(userId, dataSource.getPooledConnection().getConnection()))
+        for(Chat chat: chatsUsersService.getChatsByUserId(userId, ChatServer.getConnection()))
             array.add(createJsonChat(chat));
         jsonObject.put("chats", array);
+        System.out.println(jsonObject.toJSONString());
         return jsonObject.toJSONString();
     }
 
@@ -181,9 +195,10 @@ public class DataBaseUtils {
         JSONObject jsonObject =  new JSONObject();
         JSONArray array = new JSONArray();
         int chatId = Integer.parseInt((String) parse.get("chatId"));
-        Chat chat = chatsService.getChatById(chatId, dataSource.getPooledConnection().getConnection());
+        int pageNum = Integer.parseInt((String) parse.get("pageNum"));
+        Chat chat = chatsService.getChatById(chatId, ChatServer.getConnection());
         if (chat.getChatId() != 0){
-            for(Message message: messagesService.getMessagesByChatId(chatId, dataSource.getPooledConnection().getConnection()))
+            for(Message message: messagesService.getMessagesByChatId(chatId, pageNum, ChatServer.getConnection()))
                 array.add(createJsonMessage(message));
         }
         jsonObject.put("messages", array);
@@ -192,7 +207,7 @@ public class DataBaseUtils {
 
     public static String getUserById(JSONObject parse) throws SQLException {
         JSONObject jsonObject =  new JSONObject();
-        User user = usersService.getUserById((String) parse.get("userId"), dataSource.getPooledConnection().getConnection());
+        User user = usersService.getUserById((String) parse.get("userId"), ChatServer.getConnection());
         if (user.getUserId() != null){
             jsonObject.put("code", "200");
             jsonObject.put("userId", user.getUserId());
@@ -210,16 +225,16 @@ public class DataBaseUtils {
         String userId = (String) parse.get("userId");
         String chatName = (String) parse.get("chatName");
         JSONArray users = (JSONArray) parse.get("users");
-        if (!usersService.checkOfUsersExistence(userId, dataSource.getPooledConnection().getConnection())) {
+        if (!usersService.checkOfUsersExistence(userId, ChatServer.getConnection())) {
             result.put("code", "404");
             result.put("message", "User is not found");
         } else {
             if (!chatName.equals("")) {
-                int chatId = chatsService.insertChat(chatName, dataSource.getPooledConnection().getConnection());
+                int chatId = chatsService.insertChat(chatName, ChatServer.getConnection());
                 if (chatId != -1) {
                     Iterator<JSONObject> iterator = users.iterator();
-                    if (chatsUsersService.insertChatsUsers(iterator, chatId, dataSource.getPooledConnection().getConnection())) {
-                        chatsUsersService.insertChatsUsers(userId, chatId, dataSource.getPooledConnection().getConnection());
+                    if (chatsUsersService.insertChatsUsers(iterator, chatId, ChatServer.getConnection())) {
+                        chatsUsersService.insertChatsUsers(userId, chatId, ChatServer.getConnection());
                         result.put("code", "200");
                         result.put("message", "Success creating");
                         result.put("chatId", chatId);
@@ -257,9 +272,9 @@ public class DataBaseUtils {
         JSONObject message = new JSONObject();
         String userId = (String) parse.get("userId");
         int chatId = Integer.parseInt((String) parse.get("chatId"));
-        if (chatsService.checkOfChatExistence(chatId, dataSource.getPooledConnection().getConnection()) &&
-                usersService.checkOfUsersExistence(userId, dataSource.getPooledConnection().getConnection())){
-            chatsUsersService.outUserFromChat(chatId, userId, dataSource.getPooledConnection().getConnection());
+        if (chatsService.checkOfChatExistence(chatId, ChatServer.getConnection()) &&
+                usersService.checkOfUsersExistence(userId, ChatServer.getConnection())){
+            chatsUsersService.outUserFromChat(chatId, userId, ChatServer.getConnection());
             message.put("chatId", chatId);
             message.put("userId", userId);
             message.put("text", "I leave the chat");
@@ -279,19 +294,21 @@ public class DataBaseUtils {
 
     public static void deleteChat(int chatId){
         try {
-            if (chatsService.checkOfChatExistence(chatId, dataSource.getPooledConnection().getConnection())){
-                Iterator<String> users = chatsUsersService.getUsersByChatId(chatId,dataSource.getPooledConnection().getConnection()).iterator();
+            if (chatsService.checkOfChatExistence(chatId, ChatServer.getConnection())){
+                Iterator<String> users = chatsUsersService.getUsersByChatId(chatId,ChatServer.getConnection()).iterator();
                 if (!users.hasNext())
-                    chatsService.deleteChat(chatId, dataSource.getPooledConnection().getConnection());
+                    chatsService.deleteChat(chatId, ChatServer.getConnection());
+                //log debug delete chat with chatid from database
             }
         } catch (SQLException e) {
+            //log error delete chat from table
             e.printStackTrace();
         }
     }
 
     private static JSONObject createJsonMessage(Message message) throws SQLException {
         JSONObject jsonObject =  new JSONObject();
-        User user = usersService.getUserById(message.getUserId(), dataSource.getPooledConnection().getConnection());
+        User user = usersService.getUserById(message.getUserId(), ChatServer.getConnection());
         if (user.getUserId() != null) {
             jsonObject.put("userId", message.getUserId());
             jsonObject.put("nickname", user.getNickname());

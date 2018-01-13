@@ -1,15 +1,12 @@
 package ru.ifmo.services;
 
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import ru.ifmo.entity.Chat;
 
 import java.sql.*;
 
 
 public class ChatsService {
-    //private static Logger LOGGER = LoggerFactory.getLogger(ChatsService.class);
 
     public void deleteChat(int chatId, Connection connection) throws SQLException {
         try (Connection con = connection) {
@@ -23,13 +20,15 @@ public class ChatsService {
 
     public Boolean checkOfChatExistence(int chatId, Connection connection) throws SQLException {
         try (Connection con = connection) {
-            String sql = "SELECT * FROM chats WHERE chatId = " + "'" + chatId + "'" + ";";
-            try (Statement statement = con.createStatement()) {
-                ResultSet resultSet = statement.executeQuery(sql);
-                if (resultSet.next())
-                    return true;
-                else
-                    return false;
+            String sql = "SELECT * FROM chats WHERE chatId = ?;";
+            try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+                pstmt.setInt(1, chatId);
+                try (ResultSet resultSet = pstmt.executeQuery()) {
+                    if (resultSet.next())
+                        return true;
+                    else
+                        return false;
+                }
             }
         }
     }
@@ -37,14 +36,16 @@ public class ChatsService {
     public Chat getChatById(int chatId, Connection connection) throws SQLException {
         try (Connection con = connection) {
             Chat chat = new Chat();
-            String sql = "SELECT * FROM chats WHERE chatId = " + "'" + chatId + "'" + ";";
-            try (Statement statement = con.createStatement()) {
-                ResultSet resultSet = statement.executeQuery(sql);
-                while (resultSet.next()) {
-                    chat.setChatId(resultSet.getInt("chatId"));
-                    chat.setChatName(resultSet.getString("chatName"));
+            String sql = "SELECT * FROM chats WHERE chatId = ?;";
+            try (PreparedStatement pstmt = con.prepareStatement(sql)) {
+                pstmt.setInt(1, chatId);
+                try (ResultSet resultSet = pstmt.executeQuery()) {
+                    while (resultSet.next()) {
+                        chat.setChatId(resultSet.getInt("chatId"));
+                        chat.setChatName(resultSet.getString("chatName"));
+                    }
+                    return chat;
                 }
-                return chat;
             }
         }
     }
