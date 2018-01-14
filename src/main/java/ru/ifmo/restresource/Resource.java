@@ -5,7 +5,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.ifmo.utils.DataBaseUtils;
+import ru.ifmo.utils.ChatServerUtils;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -25,10 +25,10 @@ public class Resource {
         String responseJson = "";
         try {
             JSONParser parser = new JSONParser();
-            System.out.println(requestJson);
+            LOGGER.debug(requestJson);
             JSONObject parse = (JSONObject) parser.parse(requestJson);
             if (parse.get("userId") != null && parse.get("password") != null)
-                responseJson = DataBaseUtils.authorization(parse);
+                responseJson = ChatServerUtils.authorization(parse);
             else
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity("Invalid request json")
@@ -51,7 +51,7 @@ public class Resource {
             JSONParser parser = new JSONParser();
             JSONObject parse = (JSONObject) parser.parse(requestJson);
             if (parse.get("userId") != null && parse.get("password") != null)
-                responseJson = DataBaseUtils.registration(parse);
+                responseJson = ChatServerUtils.registration(parse);
             else
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity("Invalid request json")
@@ -74,7 +74,7 @@ public class Resource {
             JSONParser parser = new JSONParser();
             JSONObject parse = (JSONObject) parser.parse(requestJson);
             if (parse.get("userId") != null)
-                responseJson = DataBaseUtils.getChatsByUserId(parse);
+                responseJson = ChatServerUtils.getChatsByUserId(parse);
             else
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity("Invalid request json")
@@ -97,7 +97,7 @@ public class Resource {
             JSONParser parser = new JSONParser();
             JSONObject parse = (JSONObject) parser.parse(requestJson);
             if (parse.get("userId") != null)
-                responseJson = DataBaseUtils.getUserById(parse);
+                responseJson = ChatServerUtils.getUserById(parse);
             else
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity("Invalid request")
@@ -123,7 +123,7 @@ public class Resource {
             JSONObject parse = (JSONObject) parser.parse(requestJson);
             System.out.println(parse.toJSONString());//log
             if (parse.get("chatId") != null && parse.get("pageNum") != null)
-                responseJson = DataBaseUtils.getMessagesByChatId(parse);
+                responseJson = ChatServerUtils.getMessagesByChatId(parse);
             else
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity("Invalid request json")
@@ -147,7 +147,7 @@ public class Resource {
             JSONObject parse = (JSONObject) parser.parse(requestJson);
             System.out.println(parse.toJSONString());//log
             if (parse.get("userId") != null && parse.get("chatName") != null &&  parse.get("users") != null)
-                responseJson = DataBaseUtils.createChat(parse);
+                responseJson = ChatServerUtils.createChat(parse);
             else
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity("Invalid request json")
@@ -174,7 +174,7 @@ public class Resource {
             JSONObject parse = (JSONObject) parser.parse(requestJson);
             System.out.println(parse.toJSONString());
             if (parse.get("chatId") != null && parse.get("userId") != null)
-                responseJson = DataBaseUtils.outUserFromChat(parse);
+                responseJson = ChatServerUtils.outUserFromChat(parse);
             else
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity("Invalid request json")

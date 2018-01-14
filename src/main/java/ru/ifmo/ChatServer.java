@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.sqlite.javax.SQLiteConnectionPoolDataSource;
-import ru.ifmo.utils.DataBaseUtils;
+import ru.ifmo.utils.ChatServerUtils;
 import ru.ifmo.websocket.SocketServlet;
 
 import java.io.File;
@@ -29,7 +29,7 @@ public class ChatServer {
     private static SQLiteConnectionPoolDataSource dataSource = new SQLiteConnectionPoolDataSource();
     private static Map<String, Set<Session>> users = new ConcurrentHashMap<>();
     private static BlockingDeque<Integer> chatsForCheck = new LinkedBlockingDeque<>();
-    public static Logger LOGGER = LoggerFactory.getLogger(ChatServer.class);
+    private static Logger LOGGER = LoggerFactory.getLogger(ChatServer.class);
     private static File dbDir = new File(System.getProperty("user.home") + "/chat");
 
     static{
@@ -42,9 +42,11 @@ public class ChatServer {
     }
 
     public static void main(String[] args) {
-        if (DataBaseUtils.createDataBase()) {
+        if (ChatServerUtils.createDataBase()) {
             Thread deleteWorker = new Worker();
+            deleteWorker.setName("DeleteThread");
             deleteWorker.start();
+            LOGGER.info("Started " + deleteWorker);
             //log info deleteworker started
 
             ResourceConfig config = new ResourceConfig();
@@ -64,6 +66,7 @@ public class ChatServer {
 
             try {
                 server.start();
+                LOGGER.info("Started" );
                 server.join();
             } catch (Exception e) {
                 LOGGER.error("", e);
@@ -107,7 +110,8 @@ public class ChatServer {
                 try {
                     int chatId = chatsForCheck.takeFirst();
                     //log debug task chatid
-                    DataBaseUtils.deleteChat(chatId);
+                    System.out.println("i wake up");
+                    ChatServerUtils.deleteChat(chatId);
                 } catch (InterruptedException e) {
                     interrupt();
                     e.printStackTrace();

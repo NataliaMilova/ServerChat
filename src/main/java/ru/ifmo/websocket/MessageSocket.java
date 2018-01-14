@@ -10,9 +10,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.ifmo.ChatServer;
-import ru.ifmo.entity.Chat;
-import ru.ifmo.utils.DataBaseUtils;
+import ru.ifmo.utils.ChatServerUtils;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -39,13 +37,13 @@ public class MessageSocket {
                 System.out.println(parse.get("type"));
                 switch (MessageType.getMessageType((String) parse.get("type"))) {
                     case AUTHORIZATION:
-                        DataBaseUtils.onWebSocketConnectUser(parse, this.session);
+                        ChatServerUtils.onWebSocketConnectUser(parse, this.session);
                         break;
                     case MESSAGE:
-                        DataBaseUtils.onWebSocketMessage(parse);
+                        ChatServerUtils.onWebSocketMessage(parse);
                         break;
                     case EXIT:
-                        DataBaseUtils.onWebSocketDisconnectUser(parse, this.session);
+                        ChatServerUtils.onWebSocketDisconnectUser(parse, this.session);
                         break;
                 }
             }

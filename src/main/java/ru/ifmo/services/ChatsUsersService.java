@@ -5,16 +5,14 @@ import org.json.simple.JSONObject;
 import ru.ifmo.entity.Chat;
 
 import java.sql.*;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 
 public class ChatsUsersService {
 
-    public Set<Chat> getChatsByUserId(String userId, Connection connection) throws SQLException {
+    public List<Chat> getChatsByUserId(String userId, Connection connection) throws SQLException {
         try (Connection con = connection) {
-            Set<Chat> result = new HashSet<>();
-            String sql = "SELECT chatId,chatName FROM chats_users NATURAL JOIN chats WHERE userId = ?;";
+            List<Chat> result = new ArrayList<>();
+            String sql = "SELECT chatId,chatName FROM chats_users NATURAL JOIN chats WHERE userId = ? ORDER BY chatId DESC;";
             try (PreparedStatement pstmt = con.prepareStatement(sql)) {
                 pstmt.setString(1, userId);
                 try (ResultSet resultSet = pstmt.executeQuery()) {

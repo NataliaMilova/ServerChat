@@ -13,27 +13,11 @@ public class MessagesService {
         this.limitMessagesInPage = limitMessagesInPage;
     }
 
-    /*public int countOfPagesWithMessagesByChatId(int chatId, Connection connection) throws SQLException {
-        try (Connection con = connection) {
-            int countOfMessages;
-            String sql = "SELECT count(*) FROM messages WHERE chatId = ? ;";
-            try (PreparedStatement pstmt = con.prepareStatement(sql)){
-                pstmt.setInt(1,chatId);
-                try (ResultSet resultSet = pstmt.executeQuery()) {
-                    resultSet.next();
-                    countOfMessages = resultSet.getInt("count(*)");
-                    int result = (countOfMessages / limitMessagesInPage) + 1;
-                    return result;
-                }
-            }
-        }
-    }*/
-
     public List<Message> getMessagesByChatId(int chatId, int pageNum, Connection connection) throws SQLException {
         try (Connection con = connection) {
             int offset = (pageNum -1) * limitMessagesInPage;
             List<Message> result = new ArrayList<>();
-            String sql = "SELECT * FROM messages WHERE chatId = ? ORDER BY timestamp limit ?,?;";
+            String sql = "SELECT * FROM messages WHERE chatId = ? ORDER BY timestamp DESC limit ?,?;";
             try (PreparedStatement pstmt = con.prepareStatement(sql)) {
                 pstmt.setInt(1, chatId);
                 pstmt.setInt(2, offset);
@@ -48,6 +32,7 @@ public class MessagesService {
                         message.setText(resultSet.getString("text"));
                         result.add(message);
                     }
+                    Collections.reverse(result);
                     return result;
                 }
             }
