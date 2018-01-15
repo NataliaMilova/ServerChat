@@ -164,7 +164,8 @@ public class ChatServerUtils {
         Message message = parseToMessage(json);
         //System.out.println(json);//log input message
         if (message.getText() != null){
-            messagesService.insertMessage(message, ChatServer.getConnection());
+            int messageId = messagesService.insertMessage(message, ChatServer.getConnection());
+            message.setMessageId(messageId);
             Set<String> users = chatsUsersService.getUsersByChatId(message.getChatId(), ChatServer.getConnection());
             for (String user: users)
                 if (ChatServer.getUserSessions(user) != null) {
@@ -192,10 +193,18 @@ public class ChatServerUtils {
         JSONArray array = new JSONArray();
         int chatId = Integer.parseInt((String) parse.get("chatId"));
         int pageNum = Integer.parseInt((String) parse.get("pageNum"));
+        int messageId = Integer.parseInt((String) parse.get("messageId"));
+        int offset = Integer.parseInt((String) parse.get("offset"));
         Chat chat = chatsService.getChatById(chatId, ChatServer.getConnection());
         if (chat.getChatId() != 0){
-            for(Message message: messagesService.getMessagesByChatId(chatId, pageNum, ChatServer.getConnection()))
-                array.add(createJsonMessage(message));
+            if (messageId != 0) {
+                for (Message message : messagesService.getMessagesByChatId(chatId, pageNum, messageId, offset, ChatServer.getConnection()))
+                    array.add(createJsonMessage(message));
+            }
+            else {
+                for (Message message : messagesService.getMessagesByChatId(chatId, pageNum, ChatServer.getConnection()))
+                    array.add(createJsonMessage(message));
+            }
         }
         jsonObject.put("messages", array);
         return jsonObject.toJSONString();
@@ -215,38 +224,35 @@ public class ChatServerUtils {
         return jsonObject.toJSONString();
     }
 
-
-
-    /*public static String addUsersToChat(JSONObject parse){
-
-    //получить чат по айди, проверить что он в принципе есть, проверить добавителя, что он зареган и вызвать add
-
-    }*/
-
     public static String createChat(JSONObject parse) throws SQLException, IOException {
         JSONObject result = new JSONObject();
+        JSONObject message = new JSONObject();
         String userId = (String) parse.get("userId");
         String chatName = (String) parse.get("chatName");
         JSONArray users = (JSONArray) parse.get("users");
         if (!usersService.checkOfUsersExistence(userId, ChatServer.getConnection())) {
             result.put("code", "404");
             result.put("message", "User is not found");
-        }
-        else {
+        } else {
             if (!chatName.equals("")) {
                 int chatId = chatsService.insertChat(chatName, ChatServer.getConnection());
-                if (chatId != -1) {
-                    if (chatsUsersService.insertChatsUsers(userId, chatId, ChatServer.getConnection())) {
-                        if (addUsersToChat(chatId, users, chatName)) {
-                            result.put("code", "200");
-                            result.put("message", "Success creating");
-                            result.put("chatId", chatId);
-                            result.put("chatName", chatName);
-                        }
+                if (chatsUsersService.insertChatsUsers(userId, chatId, ChatServer.getConnection())) {
+                    if (addUsersToChat(chatId, users, chatName)) {
+                        message.put("chatId", Integer.toString(chatId));
+                        message.put("userId", userId);
+                        message.put("text", "I create the chat");
+                        Message message1 = parseToMessage(message);
+                        JSONObject message2 = createJsonMessage(message1);
+                        message2.put("type", "message");
+                        int messageId = messagesService.insertMessage(message1, ChatServer.getConnection());
+                        result.put("code", "200");
+                        result.put("message", "Success creating");
+                        result.put("messageId", messageId);
+                        result.put("chatId", chatId);
+                        result.put("chatName", chatName);
                     }
                 }
-            }
-            else {
+            } else {
                 result.put("code", "300");
                 result.put("message", "Invalid input data");
             }
@@ -267,7 +273,7 @@ public class ChatServerUtils {
             Message message1 = parseToMessage(message);
             JSONObject message2 = createJsonMessage(message1);
             message2.put("type", "message");
-            if (messagesService.insertMessage(message1, ChatServer.getConnection())) {
+            int messageId = messagesService.insertMessage(message1, ChatServer.getConnection());
                 Set<String> users = chatsUsersService.getUsersByChatId(chatId, ChatServer.getConnection());
                 for (String user : users)
                     if (ChatServer.getUserSessions(user) != null)
@@ -275,10 +281,10 @@ public class ChatServerUtils {
                 chatsUsersService.outUserFromChat(chatId, userId, ChatServer.getConnection());
                 result.put("code", "200");
                 result.put("message", "Success delete");
+                result.put("messageId", messageId);
                 result.put("chatId", chatId);
                 result.put("userId", userId);
                 ChatServer.addChatForCheck(chatId);
-            }
         }
         else{
             result.put("code", "300");

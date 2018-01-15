@@ -53,19 +53,22 @@ public class ChatsService {
 
     public int insertChat(String chatName, Connection connection) throws SQLException {
         try (Connection con = connection) {
-            int result = -1;
+            int result;
             String sql = "INSERT INTO chats(chatId, chatName) VALUES($next_chatId,?);";
             try (PreparedStatement preparedStatement = con.prepareStatement(sql)) {
                 preparedStatement.setString(2, chatName);
                 preparedStatement.executeUpdate();
-                String sql2 = "SELECT chatId FROM chats WHERE rowid=last_insert_rowid();";
-                Statement statement = con.createStatement();
-                ResultSet resultSet = statement.executeQuery(sql2);
-                while (resultSet.next())
+            }
+            String sql2 = "SELECT chatId FROM chats WHERE rowid=last_insert_rowid();";
+            try (Statement statement = con.createStatement()) {
+                try (ResultSet resultSet = statement.executeQuery(sql2)) {
+                    resultSet.next();
                     result = resultSet.getInt("chatId");
-                return result;
+                    return result;
+                }
             }
         }
+
     }
 
 }
