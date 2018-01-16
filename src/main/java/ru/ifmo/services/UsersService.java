@@ -11,10 +11,7 @@ public class UsersService {
             try (PreparedStatement pstmt = con.prepareStatement(sql)) {
                 pstmt.setString(1, userId);
                 try (ResultSet resultSet = pstmt.executeQuery()) {
-                    if (resultSet.next())
-                        return true;
-                    else
-                        return false;
+                    return  resultSet.next();
                 }
             }
         }
@@ -62,5 +59,4 @@ public class UsersService {
             }
         }
     }
-
 }

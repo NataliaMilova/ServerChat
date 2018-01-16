@@ -8,6 +8,7 @@ import java.sql.*;
 
 public class ChatsService {
 
+
     public void deleteChat(int chatId, Connection connection) throws SQLException {
         try (Connection con = connection) {
             String sql = "DELETE FROM chats WHERE chatId = ?";
@@ -24,10 +25,7 @@ public class ChatsService {
             try (PreparedStatement pstmt = con.prepareStatement(sql)) {
                 pstmt.setInt(1, chatId);
                 try (ResultSet resultSet = pstmt.executeQuery()) {
-                    if (resultSet.next())
-                        return true;
-                    else
-                        return false;
+                    return resultSet.next();
                 }
             }
         }
@@ -53,22 +51,23 @@ public class ChatsService {
 
     public int insertChat(String chatName, Connection connection) throws SQLException {
         try (Connection con = connection) {
-            int result;
             String sql = "INSERT INTO chats(chatId, chatName) VALUES($next_chatId,?);";
             try (PreparedStatement preparedStatement = con.prepareStatement(sql)) {
                 preparedStatement.setString(2, chatName);
                 preparedStatement.executeUpdate();
             }
-            String sql2 = "SELECT chatId FROM chats WHERE rowid=last_insert_rowid();";
-            try (Statement statement = con.createStatement()) {
-                try (ResultSet resultSet = statement.executeQuery(sql2)) {
-                    resultSet.next();
-                    result = resultSet.getInt("chatId");
-                    return result;
-                }
-            }
+           return getIdOfLastAddChat(connection);
         }
 
     }
 
+    private int getIdOfLastAddChat(Connection connection) throws SQLException {
+        String sql2 = "SELECT chatId FROM chats WHERE rowid=last_insert_rowid();";
+        try (Statement statement = connection.createStatement()) {
+            try (ResultSet resultSet = statement.executeQuery(sql2)) {
+                resultSet.next();
+                return resultSet.getInt("chatId");
+            }
+        }
+    }
 }

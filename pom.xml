@@ -102,7 +102,7 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <configuration>
-          <mainClass>ru.ifmo.ChatServer</mainClass>
+          <mainClass>ru.ifmo.server.ChatServer</mainClass>
         </configuration>
         <version>1.6.0</version>
       </plugin>
@@ -113,7 +113,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>ru.ifmo.ChatServer</mainClass>
+              <mainClass>ru.ifmo.server.ChatServer</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -122,8 +122,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>1.8</source>
+          <target>1.8</target>
         </configuration>
       </plugin>
 

@@ -5,7 +5,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.ifmo.ChatServer;
+import ru.ifmo.server.ChatServer;
 import ru.ifmo.entity.Chat;
 import ru.ifmo.entity.Message;
 import ru.ifmo.entity.User;
@@ -37,7 +37,7 @@ public class ChatServerUtils {
 
         StringBuilder usersSb = new StringBuilder();
         usersSb.append("CREATE TABLE IF NOT EXISTS users (\n")
-                .append(" userId varchar(12) NOT NULL UNIQUE,\n")
+                .append(" userId varchar(20) NOT NULL UNIQUE,\n")
                 .append(" nickname varchar(100) NOT NULL,\n")
                 .append(" lastVisit bigint NOT NULL,\n")
                 .append(" password text NOT NULL,\n")
@@ -77,6 +77,7 @@ public class ChatServerUtils {
             createTable(connection, chats_users);
         }
         //log create
+        LOGGER.debug("create");
     }
 
     private static void createTable(Connection connection, String sql) throws SQLException {

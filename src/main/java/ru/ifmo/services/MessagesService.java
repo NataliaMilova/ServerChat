@@ -13,20 +13,10 @@ public class MessagesService {
         this.limitMessagesInPage = limitMessagesInPage;
     }
 
-
     public List<Message> getMessagesByChatId(int chatId, int pageNum, int messageId, int off, Connection connection) throws SQLException {
         try (Connection con = connection) {
-            int offset = (pageNum -1) * limitMessagesInPage;
+            int offset = (pageNum -1) * limitMessagesInPage  + off + getCountOfNextMessagesInChat(messageId, chatId, connection);
             List<Message> result = new ArrayList<>();
-            String sql1 = "SELECT count(*) FROM messages WHERE chatId = ? AND  messageId > ?;";
-            try (PreparedStatement pstmt1 = con.prepareStatement(sql1)){
-                pstmt1.setInt(1, chatId);
-                pstmt1.setInt(2, messageId);
-                try (ResultSet resultSet = pstmt1.executeQuery()) {
-                    resultSet.next();
-                    offset += off + resultSet.getInt(1);
-                }
-            }
             String sql = "SELECT * FROM messages WHERE chatId = ? ORDER BY timestamp DESC limit ?,?;";
             try (PreparedStatement pstmt = con.prepareStatement(sql)) {
                 pstmt.setInt(1, chatId);
@@ -45,6 +35,18 @@ public class MessagesService {
                     Collections.reverse(result);
                     return result;
                 }
+            }
+        }
+    }
+
+    private int getCountOfNextMessagesInChat(int messageId, int chatId, Connection connection) throws SQLException {
+        String sql1 = "SELECT count(*) FROM messages WHERE chatId = ? AND  messageId > ?;";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql1)) {
+            pstmt.setInt(1, chatId);
+            pstmt.setInt(2, messageId);
+            try (ResultSet resultSet = pstmt.executeQuery()) {
+                resultSet.next();
+                return resultSet.getInt(1);
             }
         }
     }
@@ -99,7 +101,6 @@ public class MessagesService {
 
     public int insertMessage(Message message, Connection connection) throws SQLException {
         try (Connection con = connection) {
-            int result;
             String sql = "INSERT INTO messages(messageId, text, timestamp, userId, chatId) VALUES($next_messageId,?,?,?,?)";
             try (PreparedStatement preparedStatement = con.prepareStatement(sql)) {
                 preparedStatement.setString(2, message.getText());
@@ -108,14 +109,16 @@ public class MessagesService {
                 preparedStatement.setInt(5, message.getChatId());
                 preparedStatement.executeUpdate();
             }
-            String sql2 = "SELECT messageId FROM messages WHERE rowid=last_insert_rowid();";
-            try (Statement statement = con.createStatement()) {
-                ResultSet resultSet = statement.executeQuery(sql2);
-                resultSet.next();
-                result = resultSet.getInt("messageId");
-                return result;
-            }
+            return getIdOfLastAddMessage(connection);
         }
     }
 
+    private int getIdOfLastAddMessage(Connection connection) throws SQLException {
+        String sql2 = "SELECT messageId FROM messages WHERE rowid=last_insert_rowid();";
+        try (Statement statement = connection.createStatement()) {
+            ResultSet resultSet = statement.executeQuery(sql2);
+            resultSet.next();
+            return resultSet.getInt("messageId");
+        }
+    }
 }

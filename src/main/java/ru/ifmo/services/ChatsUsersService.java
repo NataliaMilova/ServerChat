@@ -9,6 +9,7 @@ import java.util.*;
 
 public class ChatsUsersService {
 
+
     public List<Chat> getChatsByUserId(String userId, Connection connection) throws SQLException {
         try (Connection con = connection) {
             List<Chat> result = new ArrayList<>();
