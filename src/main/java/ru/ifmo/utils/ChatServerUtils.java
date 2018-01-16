@@ -237,8 +237,8 @@ public class ChatServerUtils {
         } else {
             if (!chatName.equals("")) {
                 int chatId = chatsService.insertChat(chatName, ChatServer.getConnection());
-                if (chatsUsersService.insertChatsUsers(userId, chatId, ChatServer.getConnection())) {
-                    if (addUsersToChat(chatId, users, chatName)) {
+                if (addUsersToChat(chatId, users, chatName)) {
+                    if (chatsUsersService.insertChatsUsers(userId, chatId, ChatServer.getConnection())) {
                         message.put("chatId", Integer.toString(chatId));
                         message.put("userId", userId);
                         message.put("text", "I create the chat");

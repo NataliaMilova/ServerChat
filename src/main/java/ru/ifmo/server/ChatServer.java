@@ -44,9 +44,6 @@ public class ChatServer {
     public static void main(String[] args) {
         if (ChatServerUtils.createDataBase()) {
             Thread deleteWorker = new Worker();
-            deleteWorker.setName("DeleteThread");
-            deleteWorker.start();
-            LOGGER.info("Started " + deleteWorker);
             //log info deleteworker started
 
             ResourceConfig config = new ResourceConfig();
@@ -66,7 +63,10 @@ public class ChatServer {
 
             try {
                 server.start();
-                LOGGER.info("Started" );
+                LOGGER.info("Started");
+                deleteWorker.setName("DeleteThread");
+                deleteWorker.start();
+                LOGGER.info("Started " + deleteWorker);
                 server.join();
             } catch (Exception e) {
                 LOGGER.error("", e);
@@ -104,6 +104,8 @@ public class ChatServer {
     }
 
     public static class Worker extends Thread{
+        private static Logger LOGGER = LoggerFactory.getLogger(Worker.class);
+
         @Override
         public void run() {
             while (!isInterrupted()){
