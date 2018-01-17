@@ -13,7 +13,10 @@ import ru.ifmo.services.*;
 
 import java.io.IOException;
 import java.sql.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Date;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class ChatServerUtils {
 
@@ -21,22 +24,16 @@ public class ChatServerUtils {
     private static UsersService usersService;
     private static ChatsService chatsService;
     private static MessagesService messagesService;
-    private static Connection connection;
 
     static {
-        try {
-            connection = ChatServer.getConnection();
-            chatsUsersService = new ChatsUsersService(connection);
-            usersService = new UsersService(connection);
-            chatsService = new ChatsService(connection);
-            messagesService = new MessagesService(connection, 25);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        chatsUsersService = new ChatsUsersService(ChatServer.getConnection());
+        usersService = new UsersService(ChatServer.getConnection());
+        chatsService = new ChatsService(ChatServer.getConnection());
+        messagesService = new MessagesService(ChatServer.getConnection(), 25);
     }
 
 
-    private static Logger LOGGER = LoggerFactory.getLogger(ChatServerUtils.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChatServerUtils.class);
 
 
     private static void createTables() throws SQLException {
@@ -78,18 +75,10 @@ public class ChatServerUtils {
                 .append(");");
         String chats_users = chatsUsersSb.toString();
 
-        //try (Connection connection = ) {
-            //log debug try create table chats
-            createTable(connection, chats);
-            //log info table chats success create or exists
-            //log debug log debug try create table users
-            //etc
-            createTable(connection, users);
-            createTable(connection, messages);
-            createTable(connection, chats_users);
-        //}
-        //log create
-        LOGGER.debug("create");
+        createTable(ChatServer.getConnection(), chats);
+        createTable(ChatServer.getConnection(), users);
+        createTable(ChatServer.getConnection(), messages);
+        createTable(ChatServer.getConnection(), chats_users);
     }
 
     private static void createTable(Connection connection, String sql) throws SQLException {
@@ -101,10 +90,10 @@ public class ChatServerUtils {
     public static boolean createDataBase(){
         try {
             createTables();
-            //log info database is ready
+            LOGGER.info("Database prepared for ChatServer.class");
         } catch (SQLException e) {
             if (LOGGER.isErrorEnabled())
-                LOGGER.error("Error of database", e);
+                LOGGER.error("Preparation database error", e);
             return false;
         }
         return true;
@@ -148,6 +137,7 @@ public class ChatServerUtils {
             }
             result.put("code", "200");
             result.put("chats", array);
+            System.out.println(array);
         }
         return result.toJSONString();
     }
@@ -263,9 +253,12 @@ public class ChatServerUtils {
     public static String createChat(JSONObject parse) throws SQLException, IOException {
         JSONObject result = new JSONObject();
         JSONObject message = new JSONObject();
+        JSONObject user = new JSONObject();
         String userId = (String) parse.get("userId");
         String chatName = (String) parse.get("chatName");
         JSONArray users = (JSONArray) parse.get("users");
+        user.put("userId", userId);
+        users.add(user);
         if (!usersService.checkOfUsersExistence(userId)) {
             result.put("code", "404");
             result.put("message", "User is not found");
@@ -273,10 +266,9 @@ public class ChatServerUtils {
             if (!chatName.equals("")) {
                 int chatId = chatsService.insertChat(chatName);
                 if (addUsersToChat(chatId, users, chatName)) {
-                    if (chatsUsersService.insertChatsUsers(userId, chatId)) {
                         message.put("chatId", Integer.toString(chatId));
                         message.put("userId", userId);
-                        message.put("text", "I create the chat");
+                        message.put("text", "I created the chat");
                         Message message1 = parseToMessage(message);
                         JSONObject message2 = createJsonMessage(message1);
                         message2.put("type", "message");
@@ -286,7 +278,6 @@ public class ChatServerUtils {
                         result.put("messageId", messageId);
                         result.put("chatId", chatId);
                         result.put("chatName", chatName);
-                    }
                 }
             } else {
                 result.put("code", "300");
@@ -305,7 +296,7 @@ public class ChatServerUtils {
                 usersService.checkOfUsersExistence(userId)) {
             message.put("chatId", Integer.toString(chatId));
             message.put("userId", userId);
-            message.put("text", "I leave the chat");
+            message.put("text", "I left the chat");
             Message message1 = parseToMessage(message);
             JSONObject message2 = createJsonMessage(message1);
             message2.put("type", "message");
@@ -343,10 +334,12 @@ public class ChatServerUtils {
         }
     }
 
-    private static void sendMessage(Set<Session> users, JSONObject message) throws IOException {
+    private static void sendMessage(List<Session> users, JSONObject message) throws IOException {
         for (Session session: users){
             if (session.isOpen())
-                session.getRemote().sendString(message.toJSONString());
+                synchronized (session) {
+                    session.getRemote().sendString(message.toJSONString());
+                }
         }
     }
 

@@ -19,8 +19,4 @@ public class ChatsUsersServiceTest {
     public void outUserFromChat() {
     }
 
-    @Test
-    public void insertChatsUsers() {
-    }
-
 }

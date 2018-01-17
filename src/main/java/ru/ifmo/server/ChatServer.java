@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.sqlite.SQLiteDataSource;
-import org.sqlite.SQLiteOpenMode;
 import ru.ifmo.utils.ChatServerUtils;
 import ru.ifmo.websocket.SocketServlet;
 
@@ -29,24 +28,30 @@ import java.util.logging.LogManager;
 
 public class ChatServer {
     private static SQLiteDataSource dataSource = new SQLiteDataSource();
-    private static Map<String, Set<Session>> users = new ConcurrentHashMap<>();
+    private static Map<String, List<Session>> users = new ConcurrentHashMap<>();
     private static BlockingDeque<Integer> chatsForCheck = new LinkedBlockingDeque<>();
-    private static Logger LOGGER = LoggerFactory.getLogger(ChatServer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ChatServer.class);
     private static File dbDir = new File(System.getProperty("user.home") + "/chat");
+    private static Connection connection;
 
     static {
-        if (!dbDir.exists())
-            dbDir.mkdirs();
-        dataSource.setUrl("jdbc:sqlite:" + dbDir.getAbsolutePath() + "/ChatServer.db");
-        dataSource.setEnforceForeignKeys(true);
-        LogManager.getLogManager().reset();
-        SLF4JBridgeHandler.install();
+        try {
+            if (!dbDir.exists())
+                dbDir.mkdirs();
+            dataSource.setUrl("jdbc:sqlite:" + dbDir.getAbsolutePath() + "/ChatServer.db");
+            dataSource.setEnforceForeignKeys(true);
+            connection = dataSource.getConnection();
+            LogManager.getLogManager().reset();
+            SLF4JBridgeHandler.install();
+        } catch (SQLException e) {
+            if (LOGGER.isErrorEnabled())
+                LOGGER.error("Connection to database error", e);
+        }
     }
 
     public static void main(String[] args) {
         if (ChatServerUtils.createDataBase()) {
-            Thread deleteWorker = new Worker();
-            //log info deleteworker started
+            Thread cleaner = new Cleaner();
 
             ResourceConfig config = new ResourceConfig();
             config.packages("ru.ifmo");
@@ -66,14 +71,23 @@ public class ChatServer {
             try {
                 server.start();
                 LOGGER.info("Started");
-                deleteWorker.setName("DeleteThread");
-                deleteWorker.start();
-                LOGGER.info("Started " + deleteWorker);
+                cleaner.setName("Cleaner");
+                cleaner.start();
+                LOGGER.info("Started " + cleaner);
                 server.join();
             } catch (Exception e) {
-                LOGGER.error("", e);
-                deleteWorker.interrupt();
+                if (LOGGER.isErrorEnabled())
+                    LOGGER.error("Server error", e);
+                cleaner.interrupt();
             } finally {
+                if (connection != null) {
+                    try {
+                        connection.close();
+                    } catch (SQLException e1) {
+                        if (LOGGER.isErrorEnabled())
+                            LOGGER.error("Closing connection to database error", e1);
+                    }
+                }
                 server.destroy();
             }
         }
@@ -81,43 +95,47 @@ public class ChatServer {
 
     public static void addUser(Session session, String userId) {
         if (users.get(userId) == null)
-            users.put(userId, new HashSet<Session>());
+            users.put(userId, new ArrayList<>());
         users.get(userId).add(session);
-        //log debug add user and session
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("Add session " + session.getRemoteAddress() + " to userId " + userId);
     }
 
-    public static Connection getConnection() throws SQLException {
-        return dataSource.getConnection();
+    public static Connection getConnection() {
+        return ChatServer.connection;
     }
 
-    public static Set<Session> getUserSessions(String userId) {
+    public static List<Session> getUserSessions(String userId) {
         return users.get(userId);
     }
 
     public static void deleteUser(String userId, Session session) {
         users.get(userId).remove(session);
-        //log debug delete user id and session
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("Delete session " + session.getRemoteAddress() + " from userId " + userId);
     }
 
     public static void addChatForCheck(int chatId) {
         chatsForCheck.addLast(chatId);
-        //log debug chat + chatid add for checking by deleteworker
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("Add chatId " + chatId + " for checking by cleaner");
     }
 
-    public static class Worker extends Thread {
-        private static Logger LOGGER = LoggerFactory.getLogger(Worker.class);
+    public static class Cleaner extends Thread {
+        private static final Logger LOGGER = LoggerFactory.getLogger(Cleaner.class);
 
         @Override
         public void run() {
             while (!isInterrupted()) {
                 try {
                     int chatId = chatsForCheck.takeFirst();
-                    //log debug task chatid
-                    System.out.println("i wake up");
+                    if (LOGGER.isDebugEnabled())
+                        LOGGER.debug("Get chatId " + chatId + " for checking");
                     ChatServerUtils.deleteChat(chatId);
                 } catch (InterruptedException e) {
                     interrupt();
-                    e.printStackTrace();
+                    if (LOGGER.isDebugEnabled())
+                        LOGGER.debug("Cleaner was interrupt", e);
                 }
             }
         }

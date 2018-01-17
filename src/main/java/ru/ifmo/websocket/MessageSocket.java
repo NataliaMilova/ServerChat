@@ -18,7 +18,7 @@ import java.sql.SQLException;
 @WebSocket
 public class MessageSocket {
 
-    private static Logger LOGGER = LoggerFactory.getLogger(MessageSocket.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MessageSocket.class);
 
     private Session session;
 

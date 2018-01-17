@@ -15,7 +15,7 @@ import java.sql.SQLException;
 
 @Path("chat")
 public class Resource {
-    private static Logger LOGGER = LoggerFactory.getLogger(Resource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Resource.class);
 
     @POST
     @Path("auth")
