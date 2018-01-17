@@ -4,14 +4,20 @@ package ru.ifmo.services;
 import org.json.simple.JSONObject;
 import ru.ifmo.entity.Chat;
 
+import javax.sql.PooledConnection;
 import java.sql.*;
 import java.util.*;
 
 public class ChatsUsersService {
 
+    private PooledConnection pc;
 
-    public List<Chat> getChatsByUserId(String userId, Connection connection) throws SQLException {
-        try (Connection con = connection) {
+    public ChatsUsersService(PooledConnection pc) {
+        this.pc = pc;
+    }
+
+    public List<Chat> getChatsByUserId(String userId) throws SQLException {
+        try (Connection con = this.pc.getConnection()) {
             List<Chat> result = new ArrayList<>();
             String sql = "SELECT chatId,chatName FROM chats_users NATURAL JOIN chats WHERE userId = ? ORDER BY chatId DESC;";
             try (PreparedStatement pstmt = con.prepareStatement(sql)) {
@@ -29,8 +35,8 @@ public class ChatsUsersService {
         }
     }
 
-    public Set<String> getUsersByChatId(int chatId, Connection connection) throws SQLException {
-        try (Connection con = connection) {
+    public Set<String> getUsersByChatId(int chatId) throws SQLException {
+        try (Connection con = this.pc.getConnection()) {
             Set<String> result = new HashSet<>();
             String sql = "SELECT userId FROM chats_users WHERE chatId = ?;";
             try (PreparedStatement pstmt = con.prepareStatement(sql)) {
@@ -44,10 +50,10 @@ public class ChatsUsersService {
         }
     }
 
-    public void outUserFromChat(int chatId, String userId, Connection connection) throws SQLException {
-        try (Connection con = connection) {
+    public void outUserFromChat(int chatId, String userId) throws SQLException {
+        try (Connection con = this.pc.getConnection()) {
             String sql = "DELETE FROM chats_users WHERE chatId = ? AND userId = ?";
-            try (PreparedStatement pstmt = con.prepareStatement(sql)){
+            try (PreparedStatement pstmt = con.prepareStatement(sql)) {
                 pstmt.setInt(1, chatId);
                 pstmt.setString(2, userId);
                 pstmt.executeUpdate();
@@ -55,8 +61,8 @@ public class ChatsUsersService {
         }
     }
 
-    public boolean insertChatsUsers(String userId, int chatId, Connection connection) throws SQLException {
-        try (Connection con = connection) {
+    public boolean insertChatsUsers(String userId, int chatId) throws SQLException {
+        try (Connection con = this.pc.getConnection()) {
             String sql = "INSERT INTO chats_users(chatId, userId) VALUES(?,?)";
             try (PreparedStatement pstmt = con.prepareStatement(sql)) {
                 pstmt.setInt(1, chatId);
@@ -67,14 +73,16 @@ public class ChatsUsersService {
         }
     }
 
-    public boolean insertChatsUsers(Iterator<JSONObject> userId, int chatId, Connection connection){
+    public boolean insertChatsUsers(Iterator<JSONObject> userId, int chatId) {
         boolean result;
+        Connection connection = null;
         String sql = "INSERT INTO chats_users(chatId, userId) VALUES(?,?)";
         PreparedStatement pstmt = null;
         try {
+            connection = this.pc.getConnection();
             pstmt = connection.prepareStatement(sql);
             connection.setAutoCommit(false);
-            while (userId.hasNext()){
+            while (userId.hasNext()) {
                 pstmt.setInt(1, chatId);
                 pstmt.setString(2, (String) userId.next().get("userId"));
                 pstmt.executeUpdate();
@@ -83,15 +91,16 @@ public class ChatsUsersService {
             result = true;
         } catch (SQLException e) {
             try {
-                connection.rollback();
+                if (connection != null)
+                    connection.rollback();
             } catch (SQLException e1) {
                 e1.printStackTrace();
             }
             result = false;
-        }
-        finally {
+        } finally {
             try {
-                connection.close();
+                if (connection != null)
+                    connection.close();
                 if (pstmt != null)
                     pstmt.close();
             } catch (SQLException e) {
@@ -100,4 +109,6 @@ public class ChatsUsersService {
         }
         return result;
     }
+
+
 }

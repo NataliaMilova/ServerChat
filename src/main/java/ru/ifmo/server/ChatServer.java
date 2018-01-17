@@ -15,6 +15,7 @@ import org.sqlite.javax.SQLiteConnectionPoolDataSource;
 import ru.ifmo.utils.ChatServerUtils;
 import ru.ifmo.websocket.SocketServlet;
 
+import javax.sql.PooledConnection;
 import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -35,7 +36,7 @@ public class ChatServer {
     static{
         if (!dbDir.exists())
             dbDir.mkdirs();
-        dataSource.setUrl("jdbc:sqlite:" + dbDir.getAbsolutePath().toString() + "/ChatServer.db");
+        dataSource.setUrl("jdbc:sqlite:" + dbDir.getAbsolutePath() + "/ChatServer.db");
         dataSource.setEnforceForeignKeys(true);
         LogManager.getLogManager().reset();
         SLF4JBridgeHandler.install();
@@ -78,8 +79,8 @@ public class ChatServer {
         }
     }
 
-    public static Connection getConnection() throws SQLException {
-        return dataSource.getPooledConnection().getConnection();
+    public static PooledConnection getConnection() throws SQLException {
+        return dataSource.getPooledConnection();
     }
 
     public static void addUser(Session session, String userId){

@@ -20,10 +20,23 @@ import java.util.*;
 
 public class ChatServerUtils {
 
-    private static ChatsUsersService chatsUsersService = new ChatsUsersService();
-    private static UsersService usersService = new UsersService();
-    private static ChatsService chatsService = new ChatsService();
-    private static MessagesService messagesService = new MessagesService(25);
+    private static ChatsUsersService chatsUsersService;
+    private static UsersService usersService;
+    private static ChatsService chatsService;
+    private static MessagesService messagesService;
+
+    static {
+        try {
+            chatsUsersService = new ChatsUsersService(ChatServer.getConnection());
+            usersService = new UsersService(ChatServer.getConnection());
+            chatsService = new ChatsService(ChatServer.getConnection());
+            messagesService = new MessagesService(ChatServer.getConnection(), 25);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
     private static Logger LOGGER = LoggerFactory.getLogger(ChatServerUtils.class);
 
 
@@ -66,7 +79,7 @@ public class ChatServerUtils {
                 .append(");");
         String chats_users = chatsUsersSb.toString();
 
-        try (Connection connection = ChatServer.getConnection()) {
+        try (Connection connection = ChatServer.getConnection().getConnection()) {
             //log debug try create table chats
             createTable(connection, chats);
             //log info table chats success create or exists
@@ -81,8 +94,8 @@ public class ChatServerUtils {
     }
 
     private static void createTable(Connection connection, String sql) throws SQLException {
-        try (Statement stmt = connection.createStatement()) {
-            stmt.execute(sql);
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.execute();
         }
     }
 
@@ -91,7 +104,8 @@ public class ChatServerUtils {
             createTables();
             //log info database is ready
         } catch (SQLException e) {
-            LOGGER.error("Error of creating databases tables",e);
+            if (LOGGER.isErrorEnabled())
+                LOGGER.error("Error of database", e);
             return false;
         }
         return true;
@@ -102,7 +116,7 @@ public class ChatServerUtils {
         JSONObject result = new JSONObject();
         String userId = (String)parse.get("userId");
         String password = (String)parse.get("password");
-        User user = usersService.getUserById(userId, ChatServer.getConnection());
+        User user = usersService.getUserById(userId);
         if (user.getUserId() == null){
             result.put("code", "404");
             result.put("message","User is not found");
@@ -120,14 +134,33 @@ public class ChatServerUtils {
         return result.toJSONString();
     }
 
+    public static String getChatsWithNewMessagesByUserId(JSONObject parse) throws SQLException {
+        JSONObject result = new JSONObject();
+        JSONArray array = new JSONArray();
+        String userId = (String) parse.get("userId");
+        User user = usersService.getUserById(userId);
+        if (user.getUserId() == null) {
+            result.put("code", "404");
+            result.put("message", "User is not found");
+        } else {
+            if (user.getLastVisit() != 0) {
+                for (Integer chat : messagesService.getChatsWithNewMessagesByUserId(user, chatsUsersService.getChatsByUserId(userId)))
+                    array.add(chat);
+            }
+            result.put("code", "200");
+            result.put("chats", array);
+        }
+        return result.toJSONString();
+    }
+
     public static String registration(JSONObject parse) throws SQLException {
         JSONObject result = new JSONObject();
         String userId = (String)parse.get("userId");
         String nickname = (String)parse.get("nickname");
         String password = (String)parse.get("password");
-        if (!usersService.checkOfUsersExistence(userId, ChatServer.getConnection())){
+        if (!usersService.checkOfUsersExistence(userId)){
             User addUser = new User(userId, nickname, password);
-            usersService.insertUser(addUser, ChatServer.getConnection());
+            usersService.insertUser(addUser);
             result.put("code", "200");
             result.put("userId", userId);
             result.put("nickname", nickname);
@@ -141,23 +174,26 @@ public class ChatServerUtils {
         return result.toJSONString();
     }
 
-    public static void onWebSocketConnectUser(JSONObject json, Session session) throws SQLException, IOException {
+    public static void onWebSocketConnectUser(JSONObject json, Session session) throws SQLException {
         LOGGER.debug(json.toJSONString());
         if (json.get("userId") != null){
-            if (usersService.checkOfUsersExistence((String) json.get("userId"),ChatServer.getConnection())) {
+            if (usersService.checkOfUsersExistence((String) json.get("userId"))) {
                 ChatServer.addUser(session, (String) json.get("userId"));
             }
         }
     }
 
-    public static void onWebSocketDisconnectUser(JSONObject json, Session session) throws SQLException, IOException {
-        System.out.println(json.toJSONString());
+    public static void onWebSocketDisconnectUser(JSONObject json, Session session) throws SQLException {
         if (json.get("userId") != null){
-            User user = usersService.getUserById((String) json.get("userId"), ChatServer.getConnection());
+            System.out.println("HAaaay");
+            User user = usersService.getUserById((String) json.get("userId"));
             if (user.getUserId() != null) {
                 ChatServer.deleteUser((String) json.get("userId"), session);
+                if (ChatServer.getUserSessions(user.getUserId()).size() == 0){
+                    user.setLastVisit(System.currentTimeMillis());
+                    usersService.updateUserLastVisit(user);
+                }
             }
-            usersService.updateUserLastVisit(user, ChatServer.getConnection());
         }
     }
 
@@ -165,9 +201,9 @@ public class ChatServerUtils {
         Message message = parseToMessage(json);
         //System.out.println(json);//log input message
         if (message.getText() != null){
-            int messageId = messagesService.insertMessage(message, ChatServer.getConnection());
+            int messageId = messagesService.insertMessage(message);
             message.setMessageId(messageId);
-            Set<String> users = chatsUsersService.getUsersByChatId(message.getChatId(), ChatServer.getConnection());
+            Set<String> users = chatsUsersService.getUsersByChatId(message.getChatId());
             for (String user: users)
                 if (ChatServer.getUserSessions(user) != null) {
                     JSONObject message1 = createJsonMessage(message);
@@ -182,7 +218,7 @@ public class ChatServerUtils {
         JSONObject jsonObject =  new JSONObject();
         String userId = (String) parse.get("userId");
         JSONArray array = new JSONArray();
-        for(Chat chat: chatsUsersService.getChatsByUserId(userId, ChatServer.getConnection()))
+        for(Chat chat: chatsUsersService.getChatsByUserId(userId))
             array.add(createJsonChat(chat));
         jsonObject.put("chats", array);
         System.out.println(jsonObject.toJSONString());
@@ -196,14 +232,14 @@ public class ChatServerUtils {
         int pageNum = Integer.parseInt((String) parse.get("pageNum"));
         int messageId = Integer.parseInt((String) parse.get("messageId"));
         int offset = Integer.parseInt((String) parse.get("offset"));
-        Chat chat = chatsService.getChatById(chatId, ChatServer.getConnection());
+        Chat chat = chatsService.getChatById(chatId);
         if (chat.getChatId() != 0){
             if (messageId != 0) {
-                for (Message message : messagesService.getMessagesByChatId(chatId, pageNum, messageId, offset, ChatServer.getConnection()))
+                for (Message message : messagesService.getMessagesByChatId(chatId, pageNum, messageId, offset))
                     array.add(createJsonMessage(message));
             }
             else {
-                for (Message message : messagesService.getMessagesByChatId(chatId, pageNum, ChatServer.getConnection()))
+                for (Message message : messagesService.getMessagesByChatId(chatId, pageNum))
                     array.add(createJsonMessage(message));
             }
         }
@@ -213,7 +249,7 @@ public class ChatServerUtils {
 
     public static String getUserById(JSONObject parse) throws SQLException {
         JSONObject jsonObject =  new JSONObject();
-        User user = usersService.getUserById((String) parse.get("userId"), ChatServer.getConnection());
+        User user = usersService.getUserById((String) parse.get("userId"));
         if (user.getUserId() != null){
             jsonObject.put("code", "200");
             jsonObject.put("userId", user.getUserId());
@@ -231,21 +267,21 @@ public class ChatServerUtils {
         String userId = (String) parse.get("userId");
         String chatName = (String) parse.get("chatName");
         JSONArray users = (JSONArray) parse.get("users");
-        if (!usersService.checkOfUsersExistence(userId, ChatServer.getConnection())) {
+        if (!usersService.checkOfUsersExistence(userId)) {
             result.put("code", "404");
             result.put("message", "User is not found");
         } else {
             if (!chatName.equals("")) {
-                int chatId = chatsService.insertChat(chatName, ChatServer.getConnection());
+                int chatId = chatsService.insertChat(chatName);
                 if (addUsersToChat(chatId, users, chatName)) {
-                    if (chatsUsersService.insertChatsUsers(userId, chatId, ChatServer.getConnection())) {
+                    if (chatsUsersService.insertChatsUsers(userId, chatId)) {
                         message.put("chatId", Integer.toString(chatId));
                         message.put("userId", userId);
                         message.put("text", "I create the chat");
                         Message message1 = parseToMessage(message);
                         JSONObject message2 = createJsonMessage(message1);
                         message2.put("type", "message");
-                        int messageId = messagesService.insertMessage(message1, ChatServer.getConnection());
+                        int messageId = messagesService.insertMessage(message1);
                         result.put("code", "200");
                         result.put("message", "Success creating");
                         result.put("messageId", messageId);
@@ -266,20 +302,20 @@ public class ChatServerUtils {
         JSONObject message = new JSONObject();
         String userId = (String) parse.get("userId");
         int chatId = Integer.parseInt((String) parse.get("chatId"));
-        if (chatsService.checkOfChatExistence(chatId, ChatServer.getConnection()) &&
-                usersService.checkOfUsersExistence(userId, ChatServer.getConnection())) {
+        if (chatsService.checkOfChatExistence(chatId) &&
+                usersService.checkOfUsersExistence(userId)) {
             message.put("chatId", Integer.toString(chatId));
             message.put("userId", userId);
             message.put("text", "I leave the chat");
             Message message1 = parseToMessage(message);
             JSONObject message2 = createJsonMessage(message1);
             message2.put("type", "message");
-            int messageId = messagesService.insertMessage(message1, ChatServer.getConnection());
-                Set<String> users = chatsUsersService.getUsersByChatId(chatId, ChatServer.getConnection());
+            int messageId = messagesService.insertMessage(message1);
+                Set<String> users = chatsUsersService.getUsersByChatId(chatId);
                 for (String user : users)
                     if (ChatServer.getUserSessions(user) != null)
                         sendMessage(ChatServer.getUserSessions(user), message2);
-                chatsUsersService.outUserFromChat(chatId, userId, ChatServer.getConnection());
+                chatsUsersService.outUserFromChat(chatId, userId);
                 result.put("code", "200");
                 result.put("message", "Success delete");
                 result.put("messageId", messageId);
@@ -296,10 +332,10 @@ public class ChatServerUtils {
 
     public static void deleteChat(int chatId){
         try {
-            if (chatsService.checkOfChatExistence(chatId, ChatServer.getConnection())){
-                Iterator<String> users = chatsUsersService.getUsersByChatId(chatId,ChatServer.getConnection()).iterator();
+            if (chatsService.checkOfChatExistence(chatId)){
+                Iterator<String> users = chatsUsersService.getUsersByChatId(chatId).iterator();
                 if (!users.hasNext())
-                    chatsService.deleteChat(chatId, ChatServer.getConnection());
+                    chatsService.deleteChat(chatId);
                 //log debug delete chat with chatid from database
             }
         } catch (SQLException e) {
@@ -315,9 +351,9 @@ public class ChatServerUtils {
         }
     }
 
-    private static boolean addUsersToChat(int chatId, JSONArray users, String chatName) throws SQLException, IOException {
+    private static boolean addUsersToChat(int chatId, JSONArray users, String chatName) throws IOException {
         JSONObject message = new JSONObject();
-        if (chatsUsersService.insertChatsUsers(users.iterator(), chatId, ChatServer.getConnection())) {
+        if (chatsUsersService.insertChatsUsers(users.iterator(), chatId)) {
             Iterator<JSONObject> usersIds = users.iterator();
             while (usersIds.hasNext()) {
                 String user = (String) usersIds.next().get("userId");
@@ -336,7 +372,7 @@ public class ChatServerUtils {
 
     private static JSONObject createJsonMessage(Message message) throws SQLException {
         JSONObject jsonObject =  new JSONObject();
-        User user = usersService.getUserById(message.getUserId(), ChatServer.getConnection());
+        User user = usersService.getUserById(message.getUserId());
         if (user.getUserId() != null) {
             jsonObject.put("messageId", message.getMessageId());
             jsonObject.put("userId", message.getUserId());

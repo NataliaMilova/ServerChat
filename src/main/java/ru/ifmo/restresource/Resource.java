@@ -138,6 +138,30 @@ public class Resource {
     }
 
     @POST
+    @Path("user/newmessages")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getChatsWithNewMessagesByUserId(String requestJson){
+        String responseJson = "";
+        try {
+            JSONParser parser = new JSONParser();
+            JSONObject parse = (JSONObject) parser.parse(requestJson);
+            System.out.println(parse.toJSONString());//log
+            if (parse.get("userId") != null)
+                responseJson = ChatServerUtils.getChatsWithNewMessagesByUserId(parse);
+            else
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity("Invalid request json")
+                        .build();
+        } catch (SQLException | ParseException e) {
+            e.printStackTrace();
+        }
+        return Response.status(Response.Status.OK)
+                .entity(responseJson)
+                .build();
+    }
+
+    @POST
     @Path("user/chats/newchat")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)

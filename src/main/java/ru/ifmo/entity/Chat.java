@@ -11,6 +11,10 @@ public class Chat {
         this.chatName = chatName;
     }
 
+    public Chat(String chatName) {
+        this.chatName = chatName;
+    }
+
     public Chat() {
     }
 
