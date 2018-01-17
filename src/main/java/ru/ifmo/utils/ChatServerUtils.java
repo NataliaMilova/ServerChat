@@ -9,10 +9,7 @@ import ru.ifmo.server.ChatServer;
 import ru.ifmo.entity.Chat;
 import ru.ifmo.entity.Message;
 import ru.ifmo.entity.User;
-import ru.ifmo.services.ChatsService;
-import ru.ifmo.services.ChatsUsersService;
-import ru.ifmo.services.MessagesService;
-import ru.ifmo.services.UsersService;
+import ru.ifmo.services.*;
 
 import java.io.IOException;
 import java.sql.*;
@@ -24,13 +21,15 @@ public class ChatServerUtils {
     private static UsersService usersService;
     private static ChatsService chatsService;
     private static MessagesService messagesService;
+    private static Connection connection;
 
     static {
         try {
-            chatsUsersService = new ChatsUsersService(ChatServer.getConnection());
-            usersService = new UsersService(ChatServer.getConnection());
-            chatsService = new ChatsService(ChatServer.getConnection());
-            messagesService = new MessagesService(ChatServer.getConnection(), 25);
+            connection = ChatServer.getConnection();
+            chatsUsersService = new ChatsUsersService(connection);
+            usersService = new UsersService(connection);
+            chatsService = new ChatsService(connection);
+            messagesService = new MessagesService(connection, 25);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -79,7 +78,7 @@ public class ChatServerUtils {
                 .append(");");
         String chats_users = chatsUsersSb.toString();
 
-        try (Connection connection = ChatServer.getConnection().getConnection()) {
+        //try (Connection connection = ) {
             //log debug try create table chats
             createTable(connection, chats);
             //log info table chats success create or exists
@@ -88,7 +87,7 @@ public class ChatServerUtils {
             createTable(connection, users);
             createTable(connection, messages);
             createTable(connection, chats_users);
-        }
+        //}
         //log create
         LOGGER.debug("create");
     }
@@ -203,7 +202,7 @@ public class ChatServerUtils {
         if (message.getText() != null){
             int messageId = messagesService.insertMessage(message);
             message.setMessageId(messageId);
-            Set<String> users = chatsUsersService.getUsersByChatId(message.getChatId());
+            Set<String> users = chatsUsersService.getUsersIdByChatId(message.getChatId());
             for (String user: users)
                 if (ChatServer.getUserSessions(user) != null) {
                     JSONObject message1 = createJsonMessage(message);
@@ -311,7 +310,7 @@ public class ChatServerUtils {
             JSONObject message2 = createJsonMessage(message1);
             message2.put("type", "message");
             int messageId = messagesService.insertMessage(message1);
-                Set<String> users = chatsUsersService.getUsersByChatId(chatId);
+                Set<String> users = chatsUsersService.getUsersIdByChatId(chatId);
                 for (String user : users)
                     if (ChatServer.getUserSessions(user) != null)
                         sendMessage(ChatServer.getUserSessions(user), message2);
@@ -333,7 +332,7 @@ public class ChatServerUtils {
     public static void deleteChat(int chatId){
         try {
             if (chatsService.checkOfChatExistence(chatId)){
-                Iterator<String> users = chatsUsersService.getUsersByChatId(chatId).iterator();
+                Iterator<String> users = chatsUsersService.getUsersIdByChatId(chatId).iterator();
                 if (!users.hasNext())
                     chatsService.deleteChat(chatId);
                 //log debug delete chat with chatid from database

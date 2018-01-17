@@ -11,11 +11,12 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
-import org.sqlite.javax.SQLiteConnectionPoolDataSource;
+import org.sqlite.SQLiteDataSource;
+import org.sqlite.SQLiteOpenMode;
 import ru.ifmo.utils.ChatServerUtils;
 import ru.ifmo.websocket.SocketServlet;
 
-import javax.sql.PooledConnection;
+
 import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -27,13 +28,13 @@ import java.util.logging.LogManager;
 
 
 public class ChatServer {
-    private static SQLiteConnectionPoolDataSource dataSource = new SQLiteConnectionPoolDataSource();
+    private static SQLiteDataSource dataSource = new SQLiteDataSource();
     private static Map<String, Set<Session>> users = new ConcurrentHashMap<>();
     private static BlockingDeque<Integer> chatsForCheck = new LinkedBlockingDeque<>();
     private static Logger LOGGER = LoggerFactory.getLogger(ChatServer.class);
     private static File dbDir = new File(System.getProperty("user.home") + "/chat");
 
-    static{
+    static {
         if (!dbDir.exists())
             dbDir.mkdirs();
         dataSource.setUrl("jdbc:sqlite:" + dbDir.getAbsolutePath() + "/ChatServer.db");
@@ -72,44 +73,43 @@ public class ChatServer {
             } catch (Exception e) {
                 LOGGER.error("", e);
                 deleteWorker.interrupt();
-            }
-            finally {
+            } finally {
                 server.destroy();
             }
         }
     }
 
-    public static PooledConnection getConnection() throws SQLException {
-        return dataSource.getPooledConnection();
-    }
-
-    public static void addUser(Session session, String userId){
+    public static void addUser(Session session, String userId) {
         if (users.get(userId) == null)
             users.put(userId, new HashSet<Session>());
         users.get(userId).add(session);
         //log debug add user and session
     }
 
-    public static Set<Session> getUserSessions(String userId){
+    public static Connection getConnection() throws SQLException {
+        return dataSource.getConnection();
+    }
+
+    public static Set<Session> getUserSessions(String userId) {
         return users.get(userId);
     }
 
-    public static void deleteUser(String userId, Session session){
+    public static void deleteUser(String userId, Session session) {
         users.get(userId).remove(session);
         //log debug delete user id and session
     }
 
-    public static void addChatForCheck(int chatId){
+    public static void addChatForCheck(int chatId) {
         chatsForCheck.addLast(chatId);
         //log debug chat + chatid add for checking by deleteworker
     }
 
-    public static class Worker extends Thread{
+    public static class Worker extends Thread {
         private static Logger LOGGER = LoggerFactory.getLogger(Worker.class);
 
         @Override
         public void run() {
-            while (!isInterrupted()){
+            while (!isInterrupted()) {
                 try {
                     int chatId = chatsForCheck.takeFirst();
                     //log debug task chatid
