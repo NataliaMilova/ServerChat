@@ -24,8 +24,9 @@ public class MessageSocket {
 
     @OnWebSocketConnect
     public void onConnect(Session session) {
-        System.out.println("Connect: " + session.getRemoteAddress().getAddress());
         this.session = session;
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("Connect: " + session.getRemoteAddress());
     }
 
     @OnWebSocketMessage

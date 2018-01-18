@@ -4,7 +4,7 @@ import ru.ifmo.entity.Chat;
 import ru.ifmo.entity.Message;
 import ru.ifmo.entity.User;
 
-import javax.sql.PooledConnection;
+
 import java.sql.*;
 import java.util.*;
 
@@ -17,6 +17,24 @@ public class MessagesService {
     public MessagesService(Connection connection, int limitMessagesInPage) {
         this.connection = connection;
         this.limitMessagesInPage = limitMessagesInPage;
+    }
+
+    public Message getMessageById(long messageId) throws SQLException {
+        Message message = new Message();
+        String sql = "SELECT * FROM messages WHERE messageId = ?;";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setLong(1, messageId);
+            try (ResultSet resultSet = pstmt.executeQuery()) {
+                if (resultSet.next()){
+                    message.setMessageId(resultSet.getInt("messageId"));
+                    message.setTimestamp(resultSet.getLong("timestamp"));
+                    message.setText(resultSet.getString("text"));
+                    message.setChatId(resultSet.getInt("chatId"));
+                    message.setUserId(resultSet.getString("userId"));
+                }
+                return message;
+            }
+        }
     }
 
     public List<Message> getMessagesByChatId(int chatId, int pageNum, int messageId, int off) throws SQLException {
@@ -100,10 +118,10 @@ public class MessagesService {
     }
 
     public int insertMessage(Message message) throws SQLException {
-        String sql = "INSERT INTO messages(messageId, text, timestamp, userId, chatId) VALUES($next_messageId,?,?,?,?)";
+        String sql = "INSERT INTO messages(messageId, timestamp, text, userId, chatId) VALUES($next_messageId,?,?,?,?)";
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(2, message.getText());
-            preparedStatement.setLong(3, message.getTimestamp());
+            preparedStatement.setLong(2, System.currentTimeMillis());
+            preparedStatement.setString(3, message.getText());
             preparedStatement.setString(4, message.getUserId());
             preparedStatement.setInt(5, message.getChatId());
             preparedStatement.executeUpdate();
@@ -140,5 +158,13 @@ public class MessagesService {
             return result;
         }
 
+    }
+
+    public void deleteMessageById(long messageId) throws SQLException {
+        String sql = "DELETE FROM messages WHERE messageId = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setLong(1, messageId);
+            pstmt.execute();
+        }
     }
 }

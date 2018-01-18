@@ -28,7 +28,7 @@ import java.util.logging.LogManager;
 
 public class ChatServer {
     private static SQLiteDataSource dataSource = new SQLiteDataSource();
-    private static Map<String, List<Session>> users = new ConcurrentHashMap<>();
+    private static Map<String, ArrayList<Session>> users = new ConcurrentHashMap<>();
     private static BlockingDeque<Integer> chatsForCheck = new LinkedBlockingDeque<>();
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatServer.class);
     private static File dbDir = new File(System.getProperty("user.home") + "/chat");
@@ -97,22 +97,20 @@ public class ChatServer {
         if (users.get(userId) == null)
             users.put(userId, new ArrayList<>());
         users.get(userId).add(session);
-        if (LOGGER.isDebugEnabled())
-            LOGGER.debug("Add session " + session.getRemoteAddress() + " to userId " + userId);
+        LOGGER.debug("Add session " + session.getRemoteAddress() + " to userId " + userId);
     }
 
     public static Connection getConnection() {
         return ChatServer.connection;
     }
 
-    public static List<Session> getUserSessions(String userId) {
+    public static ArrayList<Session> getUserSessions(String userId) {
         return users.get(userId);
     }
 
     public static void deleteUser(String userId, Session session) {
         users.get(userId).remove(session);
-        if (LOGGER.isDebugEnabled())
-            LOGGER.debug("Delete session " + session.getRemoteAddress() + " from userId " + userId);
+        LOGGER.info("Delete session " + session.getRemoteAddress() + " from userId " + userId);
     }
 
     public static void addChatForCheck(int chatId) {

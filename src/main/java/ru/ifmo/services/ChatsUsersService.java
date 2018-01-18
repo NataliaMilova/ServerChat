@@ -33,8 +33,8 @@ public class ChatsUsersService {
         }
     }
 
-    public Set<String> getUsersIdByChatId(int chatId) throws SQLException {
-        Set<String> result = new HashSet<>();
+    public List<String> getUsersIdByChatId(int chatId) throws SQLException {
+        List<String> result = new ArrayList<>();
         String sql = "SELECT userId FROM chats_users WHERE chatId = ?;";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setInt(1, chatId);
@@ -97,6 +97,4 @@ public class ChatsUsersService {
         }
         return result;
     }
-
-
 }

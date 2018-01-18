@@ -13,10 +13,11 @@ import ru.ifmo.services.*;
 
 import java.io.IOException;
 import java.sql.*;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.Date;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class ChatServerUtils {
 
@@ -188,16 +189,16 @@ public class ChatServerUtils {
 
     public static void onWebSocketMessage(JSONObject json) throws SQLException, IOException {
         Message message = parseToMessage(json);
-        //System.out.println(json);//log input message
+        Message message1 = new Message();
+        System.out.println(json);//log input message
         if (message.getText() != null){
-            int messageId = messagesService.insertMessage(message);
-            message.setMessageId(messageId);
-            Set<String> users = chatsUsersService.getUsersIdByChatId(message.getChatId());
+            message1 = messagesService.getMessageById(messagesService.insertMessage(message));
+            List<String> users = chatsUsersService.getUsersIdByChatId(message.getChatId());
             for (String user: users)
                 if (ChatServer.getUserSessions(user) != null) {
-                    JSONObject message1 = createJsonMessage(message);
-                    message1.put("type", "message");
-                    sendMessage(ChatServer.getUserSessions(user), message1);
+                    JSONObject jsonObject = createJsonMessage(message1);
+                    jsonObject.put("type", "message");
+                    sendMessage(new ArrayList<>(ChatServer.getUserSessions(user)), jsonObject);
                 }
         }
     }
@@ -268,7 +269,7 @@ public class ChatServerUtils {
                 if (addUsersToChat(chatId, users, chatName)) {
                         message.put("chatId", Integer.toString(chatId));
                         message.put("userId", userId);
-                        message.put("text", "I created the chat");
+                        message.put("text", "I have created the chatroom");
                         Message message1 = parseToMessage(message);
                         JSONObject message2 = createJsonMessage(message1);
                         message2.put("type", "message");
@@ -296,15 +297,15 @@ public class ChatServerUtils {
                 usersService.checkOfUsersExistence(userId)) {
             message.put("chatId", Integer.toString(chatId));
             message.put("userId", userId);
-            message.put("text", "I left the chat");
+            message.put("text", "I have left the chatroom");
             Message message1 = parseToMessage(message);
             JSONObject message2 = createJsonMessage(message1);
             message2.put("type", "message");
             int messageId = messagesService.insertMessage(message1);
-                Set<String> users = chatsUsersService.getUsersIdByChatId(chatId);
+                List<String> users = chatsUsersService.getUsersIdByChatId(chatId);
                 for (String user : users)
                     if (ChatServer.getUserSessions(user) != null)
-                        sendMessage(ChatServer.getUserSessions(user), message2);
+                        sendMessage(new ArrayList<>(ChatServer.getUserSessions(user)), message2);
                 chatsUsersService.outUserFromChat(chatId, userId);
                 result.put("code", "200");
                 result.put("message", "Success delete");
@@ -335,11 +336,28 @@ public class ChatServerUtils {
     }
 
     private static void sendMessage(List<Session> users, JSONObject message) throws IOException {
-        for (Session session: users){
+        /*for (Session session: users){
             if (session.isOpen())
                 synchronized (session) {
                     session.getRemote().sendString(message.toJSONString());
                 }
+        }*/
+        Iterator<Session> iterator = users.iterator();
+        while (users.size() != 0 ) {
+            while (iterator.hasNext()) {
+                Session session = iterator.next();
+                if (session.isOpen()) {
+                    Future<Void> fut = session.getRemote().sendStringByFuture(message.toJSONString());
+                    try {
+                        fut.get(1, TimeUnit.SECONDS);
+                        iterator.remove();
+                    } catch (ExecutionException | InterruptedException | TimeoutException e) {
+                        fut.cancel(true);
+                    }
+                }
+                else
+                    iterator.remove();
+            }
         }
     }
 
@@ -354,7 +372,7 @@ public class ChatServerUtils {
                     message.put("type", "newChat");
                     message.put("chatId", chatId);
                     message.put("chatName", chatName);
-                    sendMessage(ChatServer.getUserSessions(user), message);
+                    sendMessage(new ArrayList<>(ChatServer.getUserSessions(user)), message);
                 }
             }
             return true;
@@ -382,7 +400,6 @@ public class ChatServerUtils {
             message.setChatId(Integer.parseInt((String) parse.get("chatId")));
             message.setUserId((String) parse.get("userId"));
             message.setText((String) parse.get("text"));
-            message.setTimestamp(System.currentTimeMillis());
         }
         return message;
     }

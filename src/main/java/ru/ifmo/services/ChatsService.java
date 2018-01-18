@@ -1,8 +1,6 @@
 package ru.ifmo.services;
 
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import ru.ifmo.entity.Chat;
 
 import java.sql.*;

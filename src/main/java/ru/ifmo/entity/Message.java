@@ -9,9 +9,14 @@ public class Message {
     private String userId;
     private int chatId;
 
-    public Message(long messageId, long timestamp, String text, String userId, int chatId) {
+    public Message(String text, String userId, int chatId) {
+        this.text = text;
+        this.userId = userId;
+        this.chatId = chatId;
+    }
+
+    public Message(long messageId, String text, String userId, int chatId) {
         this.messageId = messageId;
-        this.timestamp = timestamp;
         this.text = text;
         this.userId = userId;
         this.chatId = chatId;
