@@ -117,7 +117,7 @@ public class MessagesService {
         }
     }
 
-    public int insertMessage(Message message) throws SQLException {
+    /*public int insertMessage(Message message) throws SQLException {
         String sql = "INSERT INTO messages(messageId, timestamp, text, userId, chatId) VALUES($next_messageId,?,?,?,?)";
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setLong(2, System.currentTimeMillis());
@@ -127,6 +127,38 @@ public class MessagesService {
             preparedStatement.executeUpdate();
         }
         return getIdOfLastAddMessage();
+    }*/
+
+    public long insertMessage(Message message) {
+        String sql = "INSERT INTO messages(messageId, timestamp, text, userId, chatId) VALUES($next_messageId,?,?,?,?)";
+        PreparedStatement pstmt = null;
+        long messageId = -1;
+        try {
+            pstmt = connection.prepareStatement(sql);
+            connection.setAutoCommit(false);
+            pstmt.setLong(2, System.currentTimeMillis());
+            pstmt.setString(3, message.getText());
+            pstmt.setString(4, message.getUserId());
+            pstmt.setInt(5, message.getChatId());
+            pstmt.executeUpdate();
+            connection.commit();
+            messageId = getIdOfLastAddMessage();
+        } catch (SQLException e) {
+            try {
+                if (connection != null)
+                    connection.rollback();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            }
+        } finally {
+            try {
+                if (pstmt != null)
+                    pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return messageId;
     }
 
     private int getIdOfLastAddMessage() throws SQLException {

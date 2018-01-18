@@ -14,6 +14,7 @@ import ru.ifmo.services.*;
 import java.io.IOException;
 import java.sql.*;
 import java.util.*;
+import java.util.Date;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -185,9 +186,9 @@ public class ChatServerUtils {
 
     public static void onWebSocketMessage(JSONObject json) throws SQLException, IOException {
         Message message = parseToMessage(json);
-        Message message1;
         if (message.getText() != null){
-            message1 = messagesService.getMessageById(messagesService.insertMessage(message));
+            long messageId = messagesService.insertMessage(message);
+            Message message1 = messagesService.getMessageById(messageId);
             List<String> users = chatsUsersService.getUsersIdByChatId(message.getChatId());
             for (String user: users)
                 if (ChatServer.getUserSessions(user) != null) {
@@ -260,18 +261,22 @@ public class ChatServerUtils {
             if (!chatName.equals("")) {
                 int chatId = chatsService.insertChat(chatName);
                 if (addUsersToChat(chatId, users, chatName)) {
-                        message.put("chatId", Integer.toString(chatId));
-                        message.put("userId", userId);
-                        message.put("text", "I have created the chatroom");
-                        Message message1 = parseToMessage(message);
-                        JSONObject message2 = createJsonMessage(message1);
-                        message2.put("type", "message");
-                        int messageId = messagesService.insertMessage(message1);
-                        result.put("code", "200");
-                        result.put("message", "Success creating");
-                        result.put("messageId", messageId);
-                        result.put("chatId", chatId);
-                        result.put("chatName", chatName);
+                    message.put("chatId", Integer.toString(chatId));
+                    message.put("userId", userId);
+                    message.put("text", "I have created the chatroom");
+                    Message message1 = parseToMessage(message);
+                    Message message2 = messagesService.getMessageById(messagesService.insertMessage(message1));
+                    JSONObject jsonObject = createJsonMessage(message2);
+                    List<String> members = chatsUsersService.getUsersIdByChatId(chatId);
+                    jsonObject.put("type", "message");
+                    for (String member : members)
+                        if (ChatServer.getUserSessions(member) != null)
+                            sendMessage(new ArrayList<>(ChatServer.getUserSessions(member)), jsonObject);
+                    result.put("code", "200");
+                    result.put("message", "Success creating");
+                    result.put("messageId", message2.getUserId());
+                    result.put("chatId", chatId);
+                    result.put("chatName", chatName);
                 }
             } else {
                 result.put("code", "300");
@@ -292,22 +297,22 @@ public class ChatServerUtils {
             message.put("userId", userId);
             message.put("text", "I have left the chatroom");
             Message message1 = parseToMessage(message);
-            JSONObject message2 = createJsonMessage(message1);
-            message2.put("type", "message");
-            int messageId = messagesService.insertMessage(message1);
-                List<String> users = chatsUsersService.getUsersIdByChatId(chatId);
-                for (String user : users)
-                    if (ChatServer.getUserSessions(user) != null)
-                        sendMessage(new ArrayList<>(ChatServer.getUserSessions(user)), message2);
-                chatsUsersService.outUserFromChat(chatId, userId);
-                result.put("code", "200");
-                result.put("message", "Success delete");
-                result.put("messageId", messageId);
-                result.put("chatId", chatId);
-                result.put("userId", userId);
-                ChatServer.addChatForCheck(chatId);
-        }
-        else{
+            Message message2 = messagesService.getMessageById(messagesService.insertMessage(message1));
+            JSONObject jsonObject = createJsonMessage(message2);
+            jsonObject.put("type", "message");
+            chatsUsersService.outUserFromChat(chatId, userId);
+            List<String> users = chatsUsersService.getUsersIdByChatId(chatId);
+            for (String user : users)
+                if (ChatServer.getUserSessions(user) != null){
+                    sendMessage(new ArrayList<>(ChatServer.getUserSessions(user)), jsonObject);
+            }
+            result.put("code", "200");
+            result.put("message", "Success delete");
+            result.put("messageId", message2.getUserId());
+            result.put("chatId", chatId);
+            result.put("userId", userId);
+            ChatServer.addChatForCheck(chatId);
+        } else {
             result.put("code", "300");
             result.put("message", "Invalid input data");
         }
@@ -343,10 +348,16 @@ public class ChatServerUtils {
                 if (session.isOpen()) {
                     Future<Void> fut = session.getRemote().sendStringByFuture(message.toJSONString());
                     try {
+                        session.getRemote().flush();
                         fut.get(1, TimeUnit.SECONDS);
                         iterator.remove();
+                        if (fut != null){
+                            fut.cancel(true);
+                        }
                     } catch (ExecutionException | InterruptedException | TimeoutException e) {
-                        fut.cancel(true);
+                        if (fut != null){
+                            fut.cancel(true);
+                        }
                     }
                 }
                 else
@@ -403,4 +414,5 @@ public class ChatServerUtils {
         jsonObject.put("chatName", chat.getChatName());
         return jsonObject;
     }
+
 }
