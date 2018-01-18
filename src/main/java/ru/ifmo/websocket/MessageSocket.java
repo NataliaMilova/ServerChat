@@ -10,10 +10,13 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ru.ifmo.services.ChatsUsersService;
 import ru.ifmo.utils.ChatServerUtils;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 @WebSocket
 public class MessageSocket {
@@ -31,31 +34,49 @@ public class MessageSocket {
 
     @OnWebSocketMessage
     public void onMessage(String message) {
+        JSONObject jsonObject =  new JSONObject();
         try {
             JSONParser parser = new JSONParser();
             JSONObject parse = (JSONObject) parser.parse(message);
             if (parse.get("type") != null) {
-                System.out.println(parse.get("type"));
                 switch (MessageType.getMessageType((String) parse.get("type"))) {
                     case AUTHORIZATION:
+                        if (LOGGER.isDebugEnabled())
+                            LOGGER.debug("Get authorization message by socket from " + this.session.getRemoteAddress() + " with userId = " + parse.get("userId"));
                         ChatServerUtils.onWebSocketConnectUser(parse, this.session);
                         break;
                     case MESSAGE:
+                        if (LOGGER.isDebugEnabled())
+                            LOGGER.debug("Get message by  socket from " + this.session.getRemoteAddress() + " with userId = " + parse.get("userId") + ", text = " + parse.get("text"));
                         ChatServerUtils.onWebSocketMessage(parse);
                         break;
                     case EXIT:
+                        if (LOGGER.isDebugEnabled())
+                            LOGGER.debug("Get exit message by socket from " + this.session.getRemoteAddress() + " with userId = " + parse.get("userId"));
                         ChatServerUtils.onWebSocketDisconnectUser(parse, this.session);
                         break;
                 }
             }
         } catch (ParseException | SQLException | IOException e) {
-            e.printStackTrace();
+            jsonObject.put("code", "500");
+            jsonObject.put("type", "server error");
+            List<Session> sessions = new ArrayList<>();
+            sessions.add(this.session);
+            try {
+                ChatServerUtils.sendMessage(sessions, jsonObject);
+            } catch (IOException e1) {
+                if (LOGGER.isErrorEnabled())
+                    LOGGER.error("Send exception message error", e);
+            }
+            if (LOGGER.isErrorEnabled())
+                LOGGER.error("Web socket error", e);
         }
     }
 
     @OnWebSocketClose
     public void onClose(int statusCode, String reason) {
-        System.out.println("Close: statusCode=" + statusCode + ", reason=" + reason);
+        if (LOGGER.isDebugEnabled())
+            LOGGER.debug("Close: " + session.getRemoteAddress() + " with statusCode = " + statusCode + ", reason = " + reason);
     }
 
 }
