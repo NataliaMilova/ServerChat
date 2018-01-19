@@ -40,32 +40,86 @@ public class UsersService {
         }
     }
 
-    public void deleteUserById(String userId) throws SQLException {
+    public void deleteUserById(String userId) {
         String sql = "DELETE FROM users WHERE userId = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+        PreparedStatement pstmt = null;
+        try {
+            connection.setAutoCommit(false);
+            pstmt = connection.prepareStatement(sql);
             pstmt.setString(1, userId);
-            pstmt.execute();
+            pstmt.executeUpdate();
+            connection.commit();
+        } catch (SQLException e) {
+            try {
+                if (connection != null)
+                    connection.rollback();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            }
+        } finally {
+            try {
+                if (pstmt != null)
+                    pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    public void insertUser(User user) throws SQLException {
+    public void insertUser(User user) {
         String sql = "INSERT INTO users(userId, nickName, password, lastVisit) VALUES(?,?,?,?)";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, user.getUserId());
-            preparedStatement.setString(2, user.getNickname());
-            preparedStatement.setString(3, user.getPassword());
-            preparedStatement.setLong(4, 0);
-            preparedStatement.executeUpdate();
+        PreparedStatement pstmt = null;
+        try {
+            connection.setAutoCommit(false);
+            pstmt = connection.prepareStatement(sql);
+            pstmt.setString(1, user.getUserId());
+            pstmt.setString(2, user.getNickname());
+            pstmt.setString(3, user.getPassword());
+            pstmt.setLong(4, 0);
+            pstmt.executeUpdate();
+            connection.commit();
+        } catch (SQLException e) {
+            try {
+                if (connection != null)
+                    connection.rollback();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            }
+        } finally {
+            try {
+                if (pstmt != null)
+                    pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-
-    public void updateUserLastVisit(User user) throws SQLException {
+    public void updateUserLastVisit(User user) {
         String sql = "UPDATE users SET lastVisit = ? WHERE userId = ?;";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setLong(1, user.getLastVisit());
-            preparedStatement.setString(2, user.getUserId());
-            preparedStatement.executeUpdate();
+        PreparedStatement pstmt = null;
+        try {
+            connection.setAutoCommit(false);
+            pstmt = connection.prepareStatement(sql);
+            pstmt.setLong(1, user.getLastVisit());
+            pstmt.setString(2, user.getUserId());
+            pstmt.executeUpdate();
+            connection.commit();
+        } catch (SQLException e) {
+            try {
+                if (connection != null)
+                    connection.rollback();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            }
+        } finally {
+            try {
+                if (pstmt != null)
+                    pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
+
 }

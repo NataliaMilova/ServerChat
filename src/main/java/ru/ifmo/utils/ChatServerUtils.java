@@ -323,7 +323,7 @@ public class ChatServerUtils {
             if (chatsService.checkOfChatExistence(chatId)){
                 Iterator<String> users = chatsUsersService.getUsersIdByChatId(chatId).iterator();
                 if (!users.hasNext()){
-                    chatsService.deleteChat(chatId);
+                    //chatsService.deleteChat(chatId);
                     LOGGER.info("Delete chat with chatId = " + chatId);
                 }
             }
@@ -413,5 +413,4 @@ public class ChatServerUtils {
         jsonObject.put("chatName", chat.getChatName());
         return jsonObject;
     }
-
 }

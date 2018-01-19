@@ -46,23 +46,60 @@ public class ChatsUsersService {
         }
     }
 
-    public void outUserFromChat(long chatId, String userId) throws SQLException {
+    public void outUserFromChat(long chatId, String userId) {
         String sql = "DELETE FROM chats_users WHERE chatId = ? AND userId = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+        PreparedStatement pstmt = null;
+        try {
+            connection.setAutoCommit(false);
+            pstmt = connection.prepareStatement(sql);
             pstmt.setLong(1, chatId);
             pstmt.setString(2, userId);
             pstmt.executeUpdate();
+            connection.commit();
+        } catch (SQLException e) {
+            try {
+                if (connection != null)
+                    connection.rollback();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            }
+        } finally {
+            try {
+                if (pstmt != null)
+                    pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    public boolean insertChatsUsers(String userId, long chatId) throws SQLException {
+    public boolean insertChatsUsers(String userId, long chatId) {
         String sql = "INSERT INTO chats_users(chatId, userId) VALUES(?,?)";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+        PreparedStatement pstmt = null;
+        try {
+            connection.setAutoCommit(false);
+            pstmt = connection.prepareStatement(sql);
             pstmt.setLong(1, chatId);
             pstmt.setString(2, userId);
             pstmt.executeUpdate();
-            return true;
+            connection.commit();
+        } catch (SQLException e) {
+            try {
+                if (connection != null)
+                    connection.rollback();
+            } catch (SQLException e1) {
+                return false;
+            }
+            return false;
+        } finally {
+            try {
+                if (pstmt != null)
+                    pstmt.close();
+            } catch (SQLException e) {
+
+            }
         }
+        return true;
     }
 
     public boolean insertChatsUsers(Iterator<JSONObject> userId, long chatId) {

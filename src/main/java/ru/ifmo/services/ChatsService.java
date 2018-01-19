@@ -15,11 +15,29 @@ public class ChatsService {
         this.connection = connection;
     }
 
-    public void deleteChat(long chatId) throws SQLException {
+    public void deleteChat(long chatId) {
         String sql = "DELETE FROM chats WHERE chatId = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+        PreparedStatement pstmt = null;
+        try {
+            connection.setAutoCommit(false);
+            pstmt = connection.prepareStatement(sql);
             pstmt.setLong(1, chatId);
             pstmt.executeUpdate();
+            connection.commit();
+        } catch (SQLException e) {
+            try {
+                if (connection != null)
+                    connection.rollback();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            }
+        } finally {
+            try {
+                if (pstmt != null)
+                    pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -80,22 +98,4 @@ public class ChatsService {
         return chatId;
     }
 
-    /*public int insertChat(String chatName) throws SQLException {
-        String sql = "INSERT INTO chats(chatId, chatName) VALUES(?);";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(2, chatName);
-            preparedStatement.executeUpdate();
-        }
-        return getIdOfLastAddChat();
-    }*/
-
-    private int getIdOfLastAddChat() throws SQLException {
-        String sql2 = "SELECT chatId FROM chats WHERE rowid=last_insert_rowid();";
-        try (PreparedStatement statement = connection.prepareStatement(sql2)) {
-            try (ResultSet resultSet = statement.executeQuery()) {
-                resultSet.next();
-                return resultSet.getInt("chatId");
-            }
-        }
-    }
 }

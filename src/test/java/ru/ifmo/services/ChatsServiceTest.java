@@ -1,10 +1,8 @@
 package ru.ifmo.services;
 
 import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.sqlite.SQLiteDataSource;
-import org.sqlite.javax.SQLiteConnectionPoolDataSource;
 import ru.ifmo.entity.Chat;
 
 import java.io.File;

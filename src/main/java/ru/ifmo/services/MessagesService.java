@@ -117,18 +117,6 @@ public class MessagesService {
         }
     }
 
-    /*public int insertMessage(Message message) throws SQLException {
-        String sql = "INSERT INTO messages(messageId, timestamp, text, userId, chatId) VALUES($next_messageId,?,?,?,?)";
-        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setLong(2, System.currentTimeMillis());
-            preparedStatement.setString(3, message.getText());
-            preparedStatement.setString(4, message.getUserId());
-            preparedStatement.setInt(5, message.getChatId());
-            preparedStatement.executeUpdate();
-        }
-        return getIdOfLastAddMessage();
-    }*/
-
     public long insertMessage(Message message) {
         String sql = "INSERT INTO messages(timestamp, text, userId, chatId) VALUES(?,?,?,?)";
         PreparedStatement pstmt = null;
@@ -164,16 +152,6 @@ public class MessagesService {
         return messageId;
     }
 
-    private int getIdOfLastAddMessage() throws SQLException {
-        String sql2 = "SELECT messageId FROM messages WHERE rowid=last_insert_rowid();";
-        try (PreparedStatement statement = connection.prepareStatement(sql2)) {
-            ResultSet resultSet = statement.executeQuery();
-            resultSet.next();
-            return resultSet.getInt("messageId");
-        }
-    }
-
-
     public List<Long> getChatsWithNewMessagesByUserId(User user, List<Chat> chats) throws SQLException {
         List<Long> result = new ArrayList<>();
         String sql = "SELECT count(messageId) FROM messages WHERE chatId = ? AND timestamp >= ?";
@@ -195,11 +173,30 @@ public class MessagesService {
 
     }
 
-    public void deleteMessageById(long messageId) throws SQLException {
+    public void deleteMessageById(long messageId) {
         String sql = "DELETE FROM messages WHERE messageId = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+        PreparedStatement pstmt = null;
+        try {
+            connection.setAutoCommit(false);
+            pstmt = connection.prepareStatement(sql);
             pstmt.setLong(1, messageId);
-            pstmt.execute();
+            pstmt.executeUpdate();
+            connection.commit();
+        } catch (SQLException e) {
+            try {
+                if (connection != null)
+                    connection.rollback();
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            }
+        } finally {
+            try {
+                if (pstmt != null)
+                    pstmt.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         }
     }
+
 }
