@@ -25,79 +25,47 @@ public class ChatServerUtils {
     private static UsersService usersService;
     private static ChatsService chatsService;
     private static MessagesService messagesService;
-
-    static {
-        chatsUsersService = new ChatsUsersService(ChatServer.getConnection());
-        usersService = new UsersService(ChatServer.getConnection());
-        chatsService = new ChatsService(ChatServer.getConnection());
-        messagesService = new MessagesService(ChatServer.getConnection(), 25);
-    }
-
-
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatServerUtils.class);
 
 
-    private static void createTables() throws SQLException {
-        StringBuilder chatsSb = new StringBuilder();
-        chatsSb.append("CREATE TABLE IF NOT EXISTS chats ( \n")
-                .append(" chatId integer PRIMARY KEY AUTOINCREMENT,\n")
-                .append(" chatName varchar(255) NOT NULL\n")
-                .append(");");
-        String chats = chatsSb.toString();
-
-        StringBuilder usersSb = new StringBuilder();
-        usersSb.append("CREATE TABLE IF NOT EXISTS users (\n")
-                .append(" userId varchar(20) NOT NULL UNIQUE,\n")
-                .append(" nickname varchar(100) NOT NULL,\n")
-                .append(" lastVisit bigint NOT NULL,\n")
-                .append(" password text NOT NULL,\n")
-                .append(" PRIMARY KEY (userId)\n")
-                .append(");");
-        String users = usersSb.toString();
-
-        StringBuilder messagesSb = new StringBuilder();
-        messagesSb.append("CREATE TABLE IF NOT EXISTS messages (\n")
-                .append("	messageId integer PRIMARY KEY AUTOINCREMENT,\n")
-                .append("	timestamp bigint NOT NULL,\n")
-                .append("	text text NOT NULL,\n")
-                .append("	userId varchar NOT NULL,\n")
-                .append("	chatId integer NOT NULL,\n")
-                .append("	FOREIGN KEY (userId) REFERENCES users (userId)\n")
-                .append("	FOREIGN KEY (chatId) REFERENCES chats (chatId) ON DELETE CASCADE\n")
-                .append(");");
-        String messages = messagesSb.toString();
-
-        StringBuilder chatsUsersSb = new StringBuilder();
-        chatsUsersSb.append("CREATE TABLE IF NOT EXISTS chats_users (\n")
-                .append(" userId varchar NOT NULL,\n")
-                .append(" chatId integer NOT NULL,\n")
-                .append(" FOREIGN KEY (userId) REFERENCES users (userId)\n")
-                .append(" FOREIGN KEY (chatId) REFERENCES chats (chatId) ON DELETE CASCADE\n")
-                .append(");");
-        String chats_users = chatsUsersSb.toString();
-
-        createTable(ChatServer.getConnection(), chats);
-        createTable(ChatServer.getConnection(), users);
-        createTable(ChatServer.getConnection(), messages);
-        createTable(ChatServer.getConnection(), chats_users);
+    static {
+        try {
+            usersService = new UsersService(DataSource.getConnection());
+            chatsService = new ChatsService(DataSource.getConnection());
+            chatsUsersService = new ChatsUsersService(DataSource.getConnection());
+            messagesService = new MessagesService(DataSource.getConnection(), 25);
+        } catch (SQLException e) {
+            if (LOGGER.isErrorEnabled())
+                LOGGER.error("Connection to datasource error", e);
+        }
     }
 
-    private static void createTable(Connection connection, String sql) throws SQLException {
+    private static boolean existsTable(Connection connection, String tableName) throws SQLException {
+        String sql = "SHOW TABLES FROM chatserver LIKE ?;";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.execute();
+            stmt.setString(1,tableName);
+            try (ResultSet rs = stmt.executeQuery()){
+                return rs.next();
+            }
         }
     }
 
     public static boolean createDataBase(){
+        boolean result = false;
         try {
-            createTables();
-            LOGGER.info("Database prepared for ChatServer.class");
+            Connection con = DataSource.getConnection();
+            result = existsTable(con, "users") && existsTable(con, "chats") &&
+                    existsTable(con, "messages") && existsTable(con, "chats_users");
+            if (result)
+                LOGGER.info("Database prepared for ChatServer.class");
+            else
+                LOGGER.info("Database has not got necessary table");
         } catch (SQLException e) {
             if (LOGGER.isErrorEnabled())
                 LOGGER.error("Preparation database error", e);
-            return false;
+            return result;
         }
-        return true;
+        return result;
     }
 
 

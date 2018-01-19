@@ -2,10 +2,8 @@ package ru.ifmo.services;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.sqlite.SQLiteDataSource;
 import ru.ifmo.entity.User;
 
-import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -14,19 +12,15 @@ import static org.junit.Assert.assertEquals;
 public class UsersServiceTest {
 
     private static UsersService usersService;
-    private static File resourcesDirectory = new File("src/test/resources");
-    private static SQLiteDataSource dataSource = new SQLiteDataSource();
     private static Connection connection;
-    private static User existsUser1 = new User("+79141385421", "Julian", "12345");
-    private static User existsUser2 = new User("+79141385422", "Melman", "12345");
+    private static User existsUser1 = new User("+111111", "1", "12345");
+    private static User existsUser2 = new User("+222222", "2", "12345");
     private static User insertUser1 = new User ("1","1","1");
     private static User updateUser1 = new User ("2","2","2");
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
-        dataSource.setUrl("jdbc:sqlite:" + resourcesDirectory.getAbsolutePath() + "/ChatServer.db");
-        dataSource.setEnforceForeignKeys(true);
-        connection = dataSource.getConnection();
+        connection = DataSource.getConnection();
         usersService = new UsersService(connection);
     }
 

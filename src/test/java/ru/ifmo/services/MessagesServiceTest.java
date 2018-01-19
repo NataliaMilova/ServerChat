@@ -17,21 +17,17 @@ import static org.junit.Assert.*;
 
 public class MessagesServiceTest {
 
-    private static SQLiteDataSource dataSource = new SQLiteDataSource();
     private static MessagesService messagesService;
-    private static File resourcesDirectory = new File("src/test/resources");
     private static Chat existsChat1 = new Chat(1, "test1");
     private static Chat existsChat2 = new Chat(2, "test2");
-    private static User existsUser1 = new User("+79141385421", "Julian", "12345");
-    private static Message existsMessage1 = new Message(1,"1", "+79141385421", 3);
+    private static User existsUser1 = new User("+111111", "1", "12345");
+    private static Message existsMessage1 = new Message(1,"1", "+111111", 3);
     private static Connection connection;
 
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
-        dataSource.setUrl("jdbc:sqlite:" + resourcesDirectory.getAbsolutePath() + "/ChatServer.db");
-        dataSource.setEnforceForeignKeys(true);
-        connection = dataSource.getConnection();
+        connection = DataSource.getConnection();
         messagesService = new MessagesService(connection, 5);
     }
 
@@ -74,7 +70,7 @@ public class MessagesServiceTest {
 
     @Test
     public void insertMessage() throws SQLException {
-        Message message = new Message("2", "+79141385421", 3);
+        Message message = new Message("2", "+111111", 3);
         long messageId = messagesService.insertMessage(message);
         Message result = messagesService.getMessageById(messageId);
         message.setTimestamp(result.getTimestamp());

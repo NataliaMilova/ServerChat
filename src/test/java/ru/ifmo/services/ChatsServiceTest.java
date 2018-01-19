@@ -2,10 +2,8 @@ package ru.ifmo.services;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.sqlite.SQLiteDataSource;
 import ru.ifmo.entity.Chat;
 
-import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
 
@@ -13,9 +11,7 @@ import static org.junit.Assert.*;
 
 public class ChatsServiceTest {
 
-    private static SQLiteDataSource dataSource = new SQLiteDataSource();
     private static ChatsService chatsService;
-    private static File resourcesDirectory = new File("src/test/resources");
     private static Chat existsChat1 = new Chat(1, "test1");
     private static Chat existsChat2 = new Chat(2, "test2");
     private static Connection connection;
@@ -23,9 +19,7 @@ public class ChatsServiceTest {
 
     @BeforeClass
     public static void beforeClass() throws SQLException {
-        dataSource.setUrl("jdbc:sqlite:" + resourcesDirectory.getAbsolutePath() + "/ChatServer.db");
-        dataSource.setEnforceForeignKeys(true);
-        connection = dataSource.getConnection();
+        connection = DataSource.getConnection();
         chatsService = new ChatsService(connection);
     }
 

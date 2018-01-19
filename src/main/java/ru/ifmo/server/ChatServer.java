@@ -11,14 +11,10 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
-import org.sqlite.SQLiteDataSource;
 import ru.ifmo.utils.ChatServerUtils;
 import ru.ifmo.websocket.SocketServlet;
 
 
-import java.io.File;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,26 +23,13 @@ import java.util.logging.LogManager;
 
 
 public class ChatServer {
-    private static SQLiteDataSource dataSource = new SQLiteDataSource();
     private static Map<String, ArrayList<Session>> users = new ConcurrentHashMap<>();
     private static BlockingDeque<Long> chatsForCheck = new LinkedBlockingDeque<>();
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatServer.class);
-    private static File dbDir = new File(System.getProperty("user.home") + "/chat");
-    private static Connection connection;
 
     static {
-        try {
-            if (!dbDir.exists())
-                dbDir.mkdirs();
-            dataSource.setUrl("jdbc:sqlite:" + dbDir.getAbsolutePath() + "/ChatServer.db");
-            dataSource.setEnforceForeignKeys(true);
-            connection = dataSource.getConnection();
-            LogManager.getLogManager().reset();
-            SLF4JBridgeHandler.install();
-        } catch (SQLException e) {
-            if (LOGGER.isErrorEnabled())
-                LOGGER.error("Connection to database error", e);
-        }
+        LogManager.getLogManager().reset();
+        SLF4JBridgeHandler.install();
     }
 
     public static void main(String[] args) {
@@ -80,14 +63,6 @@ public class ChatServer {
                     LOGGER.error("Server error", e);
                 cleaner.interrupt();
             } finally {
-                if (connection != null) {
-                    try {
-                        connection.close();
-                    } catch (SQLException e1) {
-                        if (LOGGER.isErrorEnabled())
-                            LOGGER.error("Closing connection to database error", e1);
-                    }
-                }
                 server.destroy();
             }
         }
@@ -98,10 +73,6 @@ public class ChatServer {
             users.put(userId, new ArrayList<>());
         users.get(userId).add(session);
         LOGGER.debug("Add session " + session.getRemoteAddress() + " to userId " + userId);
-    }
-
-    public static Connection getConnection() {
-        return ChatServer.connection;
     }
 
     public static ArrayList<Session> getUserSessions(String userId) {
