@@ -87,7 +87,7 @@ public class MessagesServiceTest {
     public void getChatsWithNewMessagesByUserId() throws SQLException {
         existsUser1.setLastVisit(System.currentTimeMillis());
         List<Chat> chats = new ArrayList<>();
-        List<Integer> result = new ArrayList<>();
+        List<Long> result = new ArrayList<>();
         result.add(existsChat1.getChatId());
         chats.add(existsChat1);
         chats.add(existsChat2);

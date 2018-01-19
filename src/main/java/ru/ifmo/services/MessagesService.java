@@ -37,12 +37,12 @@ public class MessagesService {
         }
     }
 
-    public List<Message> getMessagesByChatId(int chatId, int pageNum, int messageId, int off) throws SQLException {
+    public List<Message> getMessagesByChatId(long chatId, int pageNum, int messageId, int off) throws SQLException {
         int offset = (pageNum - 1) * limitMessagesInPage + off + getCountOfNextMessagesInChat(messageId, chatId);
         List<Message> result = new ArrayList<>();
         String sql = "SELECT * FROM messages WHERE chatId = ? ORDER BY timestamp DESC limit ?,?;";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setInt(1, chatId);
+            pstmt.setLong(1, chatId);
             pstmt.setInt(2, offset);
             pstmt.setInt(3, limitMessagesInPage);
             try (ResultSet resultSet = pstmt.executeQuery()) {
@@ -61,10 +61,10 @@ public class MessagesService {
         }
     }
 
-    private int getCountOfNextMessagesInChat(int messageId, int chatId) throws SQLException {
+    private int getCountOfNextMessagesInChat(int messageId, long chatId) throws SQLException {
         String sql1 = "SELECT count(*) FROM messages WHERE chatId = ? AND  messageId > ?;";
         try (PreparedStatement pstmt = connection.prepareStatement(sql1)) {
-            pstmt.setInt(1, chatId);
+            pstmt.setLong(1, chatId);
             pstmt.setInt(2, messageId);
             try (ResultSet resultSet = pstmt.executeQuery()) {
                 resultSet.next();
@@ -73,12 +73,12 @@ public class MessagesService {
         }
     }
 
-    public List<Message> getMessagesByChatId(int chatId, int pageNum) throws SQLException {
+    public List<Message> getMessagesByChatId(long chatId, int pageNum) throws SQLException {
         int offset = (pageNum - 1) * limitMessagesInPage;
         List<Message> result = new ArrayList<>();
         String sql = "SELECT * FROM messages WHERE chatId = ? ORDER BY timestamp DESC limit ?,?;";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setInt(1, chatId);
+            pstmt.setLong(1, chatId);
             pstmt.setInt(2, offset);
             pstmt.setInt(3, limitMessagesInPage);
             try (ResultSet resultSet = pstmt.executeQuery()) {
@@ -97,11 +97,11 @@ public class MessagesService {
         }
     }
 
-    public List<Message> getMessagesByChatId(int chatId) throws SQLException {
+    public List<Message> getMessagesByChatId(long chatId) throws SQLException {
         List<Message> result = new ArrayList<>();
         String sql = "SELECT * FROM messages WHERE chatId = ? ORDER BY timestamp;";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setInt(1, chatId);
+            pstmt.setLong(1, chatId);
             try (ResultSet resultSet = pstmt.executeQuery()) {
                 while (resultSet.next()) {
                     Message message = new Message();
@@ -130,19 +130,22 @@ public class MessagesService {
     }*/
 
     public long insertMessage(Message message) {
-        String sql = "INSERT INTO messages(messageId, timestamp, text, userId, chatId) VALUES($next_messageId,?,?,?,?)";
+        String sql = "INSERT INTO messages(timestamp, text, userId, chatId) VALUES(?,?,?,?)";
         PreparedStatement pstmt = null;
         long messageId = -1;
         try {
-            pstmt = connection.prepareStatement(sql);
             connection.setAutoCommit(false);
-            pstmt.setLong(2, System.currentTimeMillis());
-            pstmt.setString(3, message.getText());
-            pstmt.setString(4, message.getUserId());
-            pstmt.setInt(5, message.getChatId());
+            pstmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+            pstmt.setLong(1, System.currentTimeMillis());
+            pstmt.setString(2, message.getText());
+            pstmt.setString(3, message.getUserId());
+            pstmt.setLong(4, message.getChatId());
             pstmt.executeUpdate();
+            ResultSet rs = pstmt.getGeneratedKeys();
+            if (rs.next()) {
+                messageId = rs.getInt(1);
+            }
             connection.commit();
-            messageId = getIdOfLastAddMessage();
         } catch (SQLException e) {
             try {
                 if (connection != null)
@@ -171,12 +174,12 @@ public class MessagesService {
     }
 
 
-    public List<Integer> getChatsWithNewMessagesByUserId(User user, List<Chat> chats) throws SQLException {
-        List<Integer> result = new ArrayList<>();
+    public List<Long> getChatsWithNewMessagesByUserId(User user, List<Chat> chats) throws SQLException {
+        List<Long> result = new ArrayList<>();
         String sql = "SELECT count(messageId) FROM messages WHERE chatId = ? AND timestamp >= ?";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             for (Chat chat : chats) {
-                pstmt.setInt(1, chat.getChatId());
+                pstmt.setLong(1, chat.getChatId());
                 pstmt.setLong(2, user.getLastVisit());
                 try (ResultSet resultSet = pstmt.executeQuery()) {
                     while (resultSet.next()) {

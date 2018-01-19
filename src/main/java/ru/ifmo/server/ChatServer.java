@@ -29,7 +29,7 @@ import java.util.logging.LogManager;
 public class ChatServer {
     private static SQLiteDataSource dataSource = new SQLiteDataSource();
     private static Map<String, ArrayList<Session>> users = new ConcurrentHashMap<>();
-    private static BlockingDeque<Integer> chatsForCheck = new LinkedBlockingDeque<>();
+    private static BlockingDeque<Long> chatsForCheck = new LinkedBlockingDeque<>();
     private static final Logger LOGGER = LoggerFactory.getLogger(ChatServer.class);
     private static File dbDir = new File(System.getProperty("user.home") + "/chat");
     private static Connection connection;
@@ -113,7 +113,7 @@ public class ChatServer {
         LOGGER.info("Delete session " + session.getRemoteAddress() + " from userId " + userId);
     }
 
-    public static void addChatForCheck(int chatId) {
+    public static void addChatForCheck(long chatId) {
         chatsForCheck.addLast(chatId);
         if (LOGGER.isDebugEnabled())
             LOGGER.debug("Add chatId " + chatId + " for checking by cleaner");
@@ -126,7 +126,7 @@ public class ChatServer {
         public void run() {
             while (!isInterrupted()) {
                 try {
-                    int chatId = chatsForCheck.takeFirst();
+                    long chatId = chatsForCheck.takeFirst();
                     if (LOGGER.isDebugEnabled())
                         LOGGER.debug("Get chatId " + chatId + " for checking");
                     ChatServerUtils.deleteChat(chatId);

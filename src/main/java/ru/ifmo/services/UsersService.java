@@ -60,7 +60,6 @@ public class UsersService {
     }
 
 
-
     public void updateUserLastVisit(User user) throws SQLException {
         String sql = "UPDATE users SET lastVisit = ? WHERE userId = ?;";
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {

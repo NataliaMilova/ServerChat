@@ -33,11 +33,11 @@ public class ChatsUsersService {
         }
     }
 
-    public List<String> getUsersIdByChatId(int chatId) throws SQLException {
+    public List<String> getUsersIdByChatId(long chatId) throws SQLException {
         List<String> result = new ArrayList<>();
         String sql = "SELECT userId FROM chats_users WHERE chatId = ?;";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setInt(1, chatId);
+            pstmt.setLong(1, chatId);
             try (ResultSet resultSet = pstmt.executeQuery()) {
                 while (resultSet.next())
                     result.add(resultSet.getString("userId"));
@@ -46,26 +46,26 @@ public class ChatsUsersService {
         }
     }
 
-    public void outUserFromChat(int chatId, String userId) throws SQLException {
+    public void outUserFromChat(long chatId, String userId) throws SQLException {
         String sql = "DELETE FROM chats_users WHERE chatId = ? AND userId = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setInt(1, chatId);
+            pstmt.setLong(1, chatId);
             pstmt.setString(2, userId);
             pstmt.executeUpdate();
         }
     }
 
-    public boolean insertChatsUsers(String userId, int chatId) throws SQLException {
+    public boolean insertChatsUsers(String userId, long chatId) throws SQLException {
         String sql = "INSERT INTO chats_users(chatId, userId) VALUES(?,?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setInt(1, chatId);
+            pstmt.setLong(1, chatId);
             pstmt.setString(2, userId);
             pstmt.executeUpdate();
             return true;
         }
     }
 
-    public boolean insertChatsUsers(Iterator<JSONObject> userId, int chatId) {
+    public boolean insertChatsUsers(Iterator<JSONObject> userId, long chatId) {
         boolean result;
         String sql = "INSERT INTO chats_users(chatId, userId) VALUES(?,?)";
         PreparedStatement pstmt = null;
@@ -73,7 +73,7 @@ public class ChatsUsersService {
             pstmt = connection.prepareStatement(sql);
             connection.setAutoCommit(false);
             while (userId.hasNext()) {
-                pstmt.setInt(1, chatId);
+                pstmt.setLong(1, chatId);
                 pstmt.setString(2, (String) userId.next().get("userId"));
                 pstmt.executeUpdate();
             }

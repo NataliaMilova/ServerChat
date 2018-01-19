@@ -3,10 +3,10 @@ package ru.ifmo.entity;
 import java.util.Objects;
 
 public class Chat {
-    private int chatId;
+    private long chatId;
     private String chatName;
 
-    public Chat(int chatId, String chatName) {
+    public Chat(long chatId, String chatName) {
         this.chatId = chatId;
         this.chatName = chatName;
     }
@@ -18,11 +18,11 @@ public class Chat {
     public Chat() {
     }
 
-    public int getChatId() {
+    public long getChatId() {
         return chatId;
     }
 
-    public void setChatId(int chatId) {
+    public void setChatId(long chatId) {
         this.chatId = chatId;
     }
 

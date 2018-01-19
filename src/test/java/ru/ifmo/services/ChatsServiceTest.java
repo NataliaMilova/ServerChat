@@ -45,11 +45,11 @@ public class ChatsServiceTest {
         String chatNameInsertChat2 = "test4";
         Chat chat1 = new Chat();
         chat1.setChatName(chatNameInsertChat1);
-        int chatIdInsertChat1 = chatsService.insertChat(chatNameInsertChat1);
+        long chatIdInsertChat1 = chatsService.insertChat(chatNameInsertChat1);
         chat1.setChatId(chatIdInsertChat1);
         Chat chat2 = new Chat();
         chat2.setChatName(chatNameInsertChat2);
-        int chatIdInsertChat2 = chatsService.insertChat(chatNameInsertChat2);
+        long chatIdInsertChat2 = chatsService.insertChat(chatNameInsertChat2);
         chat2.setChatId(chatIdInsertChat2);
         assertEquals(chat1, chatsService.getChatById(chatIdInsertChat1));
         assertEquals(chat2, chatsService.getChatById(chatIdInsertChat2));
@@ -60,8 +60,8 @@ public class ChatsServiceTest {
     @Test
     public void deleteChat() throws SQLException {
         Chat chat = new Chat();
-        int id1 = chatsService.insertChat("hello");
-        int id2 = chatsService.insertChat("hello");
+        long id1 = chatsService.insertChat("hello");
+        long id2 = chatsService.insertChat("hello");
         chatsService.deleteChat(id1);
         chatsService.deleteChat(id2);
         assertEquals(chat, chatsService.getChatById(id1));

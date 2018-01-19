@@ -14,7 +14,6 @@ import ru.ifmo.services.*;
 import java.io.IOException;
 import java.sql.*;
 import java.util.*;
-import java.util.Date;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -134,7 +133,7 @@ public class ChatServerUtils {
             result.put("message", "User is not found");
         } else {
             if (user.getLastVisit() != 0) {
-                for (Integer chat : messagesService.getChatsWithNewMessagesByUserId(user, chatsUsersService.getChatsByUserId(userId)))
+                for (long chat : messagesService.getChatsWithNewMessagesByUserId(user, chatsUsersService.getChatsByUserId(userId)))
                     array.add(chat);
             }
             result.put("code", "200");
@@ -212,7 +211,7 @@ public class ChatServerUtils {
     public static String getMessagesByChatId(JSONObject parse) throws SQLException{
         JSONObject jsonObject =  new JSONObject();
         JSONArray array = new JSONArray();
-        int chatId = Integer.parseInt((String) parse.get("chatId"));
+        long chatId = Long.parseLong((String) parse.get("chatId"));
         int pageNum = Integer.parseInt((String) parse.get("pageNum"));
         int messageId = Integer.parseInt((String) parse.get("messageId"));
         int offset = Integer.parseInt((String) parse.get("offset"));
@@ -259,9 +258,9 @@ public class ChatServerUtils {
             result.put("message", "User is not found");
         } else {
             if (!chatName.equals("")) {
-                int chatId = chatsService.insertChat(chatName);
+                long chatId = chatsService.insertChat(chatName);
                 if (addUsersToChat(chatId, users, chatName)) {
-                    message.put("chatId", Integer.toString(chatId));
+                    message.put("chatId", Long.toString(chatId));
                     message.put("userId", userId);
                     message.put("text", "I have created the chatroom");
                     Message message1 = parseToMessage(message);
@@ -290,10 +289,10 @@ public class ChatServerUtils {
         JSONObject result = new JSONObject();
         JSONObject message = new JSONObject();
         String userId = (String) parse.get("userId");
-        int chatId = Integer.parseInt((String) parse.get("chatId"));
+        long chatId = Long.parseLong((String) parse.get("chatId"));
         if (chatsService.checkOfChatExistence(chatId) &&
                 usersService.checkOfUsersExistence(userId)) {
-            message.put("chatId", Integer.toString(chatId));
+            message.put("chatId", Long.toString(chatId));
             message.put("userId", userId);
             message.put("text", "I have left the chatroom");
             Message message1 = parseToMessage(message);
@@ -319,7 +318,7 @@ public class ChatServerUtils {
         return result.toJSONString();
     }
 
-    public static void deleteChat(int chatId){
+    public static void deleteChat(long chatId){
         try {
             if (chatsService.checkOfChatExistence(chatId)){
                 Iterator<String> users = chatsUsersService.getUsersIdByChatId(chatId).iterator();
@@ -366,7 +365,7 @@ public class ChatServerUtils {
         }
     }
 
-    private static boolean addUsersToChat(int chatId, JSONArray users, String chatName) throws IOException {
+    private static boolean addUsersToChat(long chatId, JSONArray users, String chatName) throws IOException {
         JSONObject message = new JSONObject();
         if (chatsUsersService.insertChatsUsers(users.iterator(), chatId)) {
             Iterator<JSONObject> usersIds = users.iterator();

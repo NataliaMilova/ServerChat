@@ -7,15 +7,15 @@ public class Message {
     private long timestamp;
     private String text;
     private String userId;
-    private int chatId;
+    private long chatId;
 
-    public Message(String text, String userId, int chatId) {
+    public Message(String text, String userId, long chatId) {
         this.text = text;
         this.userId = userId;
         this.chatId = chatId;
     }
 
-    public Message(long messageId, String text, String userId, int chatId) {
+    public Message(long messageId, String text, String userId, long chatId) {
         this.messageId = messageId;
         this.text = text;
         this.userId = userId;
@@ -57,11 +57,11 @@ public class Message {
         this.userId = userId;
     }
 
-    public int getChatId() {
+    public long getChatId() {
         return chatId;
     }
 
-    public void setChatId(int chatId) {
+    public void setChatId(long chatId) {
         this.chatId = chatId;
     }
 
