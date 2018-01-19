@@ -36,26 +36,25 @@ public class ChatServerUtils {
             messagesService = new MessagesService(DataSource.getConnection(), 25);
         } catch (SQLException e) {
             if (LOGGER.isErrorEnabled())
-                LOGGER.error("Connection to datasource error", e);
+                LOGGER.error("Connection to database error", e);
         }
     }
 
     private static boolean existsTable(Connection connection, String tableName) throws SQLException {
         String sql = "SHOW TABLES FROM chatserver LIKE ?;";
-        try(Connection con = connection) {
-            try (PreparedStatement stmt = con.prepareStatement(sql)) {
-                stmt.setString(1, tableName);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    return rs.next();
-                }
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, tableName);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
             }
         }
     }
 
     public static boolean createDataBase(){
         boolean result = false;
+        Connection con = null;
         try {
-            Connection con = DataSource.getConnection();
+            con = DataSource.getConnection();
             result = existsTable(con, "users") && existsTable(con, "chats") &&
                     existsTable(con, "messages") && existsTable(con, "chats_users");
             if (result)
@@ -66,6 +65,16 @@ public class ChatServerUtils {
             if (LOGGER.isErrorEnabled())
                 LOGGER.error("Preparation database error", e);
             return result;
+        }
+        finally {
+            if (con != null) {
+                try {
+                    con.close();
+                } catch (SQLException e) {
+                    if (LOGGER.isErrorEnabled())
+                        LOGGER.error("Close connection error", e);
+                }
+            }
         }
         return result;
     }
