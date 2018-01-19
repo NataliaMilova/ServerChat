@@ -60,7 +60,7 @@ public class ChatsUsersServiceTest {
     }
 
     @Test
-    public void insertChatsUsers() throws SQLException {
+    public void insertChatsUsers() {
         assertEquals(true, chatsUsersService.insertChatsUsers(existsUser1.getUserId(), existsChat1.getChatId()));
         assertEquals(true, chatsUsersService.insertChatsUsers(existsUser2.getUserId(), existsChat2.getChatId()));
         chatsUsersService.outUserFromChat(existsChat1.getChatId(), existsUser1.getUserId());

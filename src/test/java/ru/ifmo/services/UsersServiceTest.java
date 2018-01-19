@@ -59,6 +59,4 @@ public class UsersServiceTest {
         assertEquals(true, usersService.checkOfUsersExistence(existsUser1.getUserId()));
         assertEquals(true, usersService.checkOfUsersExistence(existsUser2.getUserId()));
     }
-
-
 }

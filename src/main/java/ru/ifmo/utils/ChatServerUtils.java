@@ -42,10 +42,12 @@ public class ChatServerUtils {
 
     private static boolean existsTable(Connection connection, String tableName) throws SQLException {
         String sql = "SHOW TABLES FROM chatserver LIKE ?;";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1,tableName);
-            try (ResultSet rs = stmt.executeQuery()){
-                return rs.next();
+        try(Connection con = connection) {
+            try (PreparedStatement stmt = con.prepareStatement(sql)) {
+                stmt.setString(1, tableName);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    return rs.next();
+                }
             }
         }
     }
@@ -135,7 +137,7 @@ public class ChatServerUtils {
         if (json.get("userId") != null)
             if (usersService.checkOfUsersExistence((String) json.get("userId"))) {
                 ChatServer.addUser(session, (String) json.get("userId"));
-        }
+            }
     }
 
     public static void onWebSocketDisconnectUser(JSONObject json, Session session) throws SQLException {
@@ -272,7 +274,7 @@ public class ChatServerUtils {
             for (String user : users)
                 if (ChatServer.getUserSessions(user) != null){
                     sendMessage(new ArrayList<>(ChatServer.getUserSessions(user)), jsonObject);
-            }
+                }
             result.put("code", "200");
             result.put("message", "Success delete");
             result.put("messageId", message2.getUserId());
