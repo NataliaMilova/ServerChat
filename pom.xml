@@ -4,7 +4,7 @@
 
   <groupId>ru.ifmo</groupId>
   <artifactId>ServerChat</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <version>1.1</version>
   <packaging>jar</packaging>
 
   <name>ServerChat</name>
@@ -14,7 +14,31 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.6.6</version>
+  </parent>
+
   <dependencies>
+    <!--spring boot dependencies-->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <!--end of spring boot-->
+
+    <!--database dependency-->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.3.5</version>
+    </dependency>
+    <!--end of database-->
 
     <!-- Server -->
     <dependency>
@@ -70,7 +94,8 @@
     <dependency>
       <groupId>mysql</groupId>
       <artifactId>mysql-connector-java</artifactId>
-      <version>5.1.6</version>
+<!--      <version>5.1.6</version>-->
+      <version>8.0.29</version>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc -->
@@ -117,7 +142,7 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <configuration>
-          <mainClass>ru.ifmo.server.ChatServer</mainClass>
+          <mainClass>ru.ifmo.old.server.ChatServer</mainClass>
         </configuration>
         <version>1.6.0</version>
       </plugin>
@@ -128,7 +153,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>ru.ifmo.server.ChatServer</mainClass>
+              <mainClass>ru.ifmo.old.server.ChatServer</mainClass>
             </manifest>
           </archive>
         </configuration>
